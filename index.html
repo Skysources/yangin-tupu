@@ -1,14 +1,5 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Şifresiz erişim istendiği için okuma/yazma herkese açık.
-    // Link'i bilmeyen biri koleksiyon adlarını tahmin etmeden veriye ulaşamaz,
-    // ama link + proje bilgisi ele geçerse veri değiştirilebilir.
-    match /tupler/{tupId} {
-      allow read, write: if true;
-    }
-    match /kontroller/{ay} {
-      allow read, write: if true;
-    }
-  }
-}
+node_modules
+dist
+.env
+.env.local
+.firebase

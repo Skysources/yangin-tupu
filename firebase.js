@@ -1,9 +1,56 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import YanginTupuKontrol from "./YanginTupuKontrol.jsx";
+name: GitHub Pages'e Yayınla
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <YanginTupuKontrol />
-  </React.StrictMode>
-);
+# main dalına her kod gönderildiğinde site otomatik derlenip yayınlanır.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# GitHub Pages'e yayın için gereken izinler
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Aynı anda tek yayın çalışsın
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodu al
+        uses: actions/checkout@v4
+
+      - name: Node.js kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bağımlılıkları kur
+        run: npm ci
+
+      - name: Siteyi derle
+        run: npm run build
+
+      - name: Pages yapılandırmasını uygula
+        uses: actions/configure-pages@v5
+
+      - name: Derlenen dosyaları yükle
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: GitHub Pages'e yayınla
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,6 +1,899 @@
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=
-VITE_FIREBASE_PROJECT_ID=
-VITE_FIREBASE_STORAGE_BUCKET=
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
+import { useState, useEffect, useMemo } from "react";
+import {
+  subscribeTupler,
+  subscribeKontroller,
+  tuplerBosMu,
+  tuplerToplu,
+  tupGuncelle as tupGuncelleFirestore,
+  tupEkle as tupEkleFirestore,
+  tupSil as tupSilFirestore,
+  kaydetKontrol,
+} from "./data.js";
+
+// ─── Başlangıç verisi (FR.43.17 Yangın Söndürme Tüpleri Kontrol Formu) ───
+// Bu liste yalnızca veritabanı ilk kez kuruluyorken "tohum" olarak kullanılır;
+// sonrasında kullanıcının düzenlemeleri / eklemeleri Firestore'da kalıcı saklanır.
+const VARSAYILAN_TUPLER = [
+  [1, "GÜVENLİK ÖN", "6 KG KURU TOZ", "MART 2025", "OCAK 2029"],
+  [2, "GÜVENLİK ARKA", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [3, "ŞİRKET ÖN CEPHE", "50 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [4, "ŞİRKET ÖN CEPHE", "50 KG KÖPÜK", "OCAK 2025", "OCAK 2029"],
+  [5, "ÖN İÇ KAPI YANI", "50 KG KÖPÜK", "OCAK 2025", "TEMMUZ 2029"],
+  [6, "ÖN İÇ KAPI YANI", "50 KG KURU TOZ", "OCAK 2025", "TEMMUZ 2029"],
+  [7, "MAVİ YAKA ZEMİN KAT DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [8, "MEKANİK DUVAR TARAFI", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [9, "MEKANİK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [10, "MEKANİK DUVAR TARAFI DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [11, "MEKANİK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [12, "MEKANİK TARAFI ALT KAT İNİŞ KAPISI ÖNÜ", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [13, "MEKANİK TARAFI ALT KAT İNİŞ KAPISI ÖNÜ DOLAP", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [14, "MEKANİK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [15, "MEKANİK DUVAR TARAFI DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [16, "ÜST KAT KARŞI DUVAR DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [17, "ÜST KAT KARŞI DUVAR DOLAP", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [18, "ÜST KAT KARŞI DUVAR", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [19, "ÜST KAT KARŞI DUVAR DOLAP", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [20, "ÜST KAT KARŞI DUVAR", "5 KG KARBONDİOKSİT", "OCAK 2023", "OCAK 2029"],
+  [21, "ÜST KAT YÜK ASANSÖRÜ YANI", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [22, "ELEKTRİK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [23, "ELEKTRİK DUVAR TARAFI", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [24, "ELEKTRİK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [25, "ELEKTRİK TARAFI AŞAĞI İNİŞ DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [26, "ELEKTRİK TARAFI AŞAĞI İNİŞ KAPI ÖNÜ", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [27, "ELEKTRİK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [28, "ELEKTRİK DUVAR TARAFI DUVAR DOLAP İÇİ", "6 KG KURU TOZ", "OCAK 2023", "OCAK 2027"],
+  [29, "ELEKTRİK DUVAR TARAFI PANO", null, "OCAK 2025", "OCAK 2029"],
+  [30, "BEYAZ YAKA İÇERİ GİRİŞ KAPI ÖNÜ", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [31, "BEYAZ YAKA ZEMİN DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [32, "ÜST KAT ORTA KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [33, "ÜST KAT ORTA KOLON DOLAP", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [34, "ÜST KAT ORTA KOLON", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [35, "ÜST KAT ORTA KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [36, "ÜST KAT ORTA KOLON", "5 KG KÖPÜK", "EYLÜL 2023", "EYLÜL 2025"],
+  [37, "ÜST KAT ORTA KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [38, "ÜST KAT ORTA KOLON", "6 KG KURU TOZ", "OCAK ?", "OCAK 2029"],
+  [39, "ÜST KAT ORTA KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [40, "ÜST KAT ORTA KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [41, "ÜST KAT ORTA KOLON", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [42, "ÜST KAT ORTA KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [43, "ÜST KAT ORTA KOLON", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [44, "YÜK ASANSÖRÜ TARAFI AŞAĞI İNİŞ MERDİVEN BOŞLUĞU", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [45, "BOYA KAYNAK GİRİŞ ÖNÜ", "50 KG KÖPÜK", "OCAK 2025", "OCAK 2029"],
+  [46, "BOYA KAYNAK GİRİŞ ÖNÜ", "50 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [47, "KAYNAK OFİS YANI DOLAP İÇİ", "6 KG KURU TOZ", "NİSAN 2024", "OCAK 2028"],
+  [48, "KAYNAK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [49, "KAYNAK DUVAR TARAFI DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [50, "KAYNAK TARAFI PANO TÜPÜ", null, null, null],
+  [51, "KAYNAK TARAFI YUKARI ÇIKIŞ DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [52, "KAYNAK TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [53, "KAYNAK TARAFI KOLON", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [54, "KAYNAK TARAFI KOLON LAVOBO ÖNÜ", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [55, "KAYNAK TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [56, "KAYNAK TARAFI KOLON", "6 KG KURU TOZ", "OCAK ?", "OCAK 2029"],
+  [57, "KAYNAK TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [58, "DEPO İÇİ", "12 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [59, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [60, "BOYA TARAFI KOLON", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [61, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [62, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [63, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [64, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [65, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [66, "BOYA TARAFI KOLON", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [67, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [68, "BOYA TARAFI KOLON", "6 KG KURU TOZ", "OCAK 2025", "OCAK 2029"],
+  [69, "BOYA TARAFI OFİS DOLAP İÇİ", "6 KG KURU TOZ", "OCAK 2023", "OCAK 2027"],
+  [70, "BOYA DUVAR TARAFI DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [71, "BOYA TARAFI DUVAR DOLAP YANI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [72, "DEPO ARKASI GİYİNME YERİ DOLAP", "6 KG KURU TOZ", "OCAK 2023", "HAZİRAN 2027"],
+  [73, "ELEKTRİK DUVAR TARAFI", "5 KG KARBONDİOKSİT", "OCAK 2025", "OCAK 2029"],
+  [74, "BEYAZ YAKA 1. KAT DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [75, "BEYAZ YAKA 2. KAT DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [76, "ELEKTRİK TARAFI KOLON ÖNÜ", "30 KG KARBONDİOKSİT", "OCAK 2025", "TEMMUZ 2029"],
+  [77, "MAVİ YAKA 1. KAT DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [78, "MAVİ YAKA 2. KAT DOLAP İÇİ", "6 KG KURU TOZ", "HAZİRAN 2023", "HAZİRAN 2027"],
+  [79, "BOYA TARAFI KOLON", "5 KG KARBONDİOKSİT", null, null],
+  [80, "BEYAZ YAKA 3. KAT DOLAP İÇİ", "6 KG KURU TOZ", null, null],
+  [81, "BEYAZ YAKA 1. KAT SERVER ODASI", null, null, null],
+  [82, "BEYAZ YAKA -1 KAT DOLAP İÇİ", "6 KG KURU TOZ", null, null],
+  [83, "MAVİ YAKA 3. KAT DOLAP İÇİ", "6 KG KURU TOZ", null, null],
+  [84, "MAVİ YAKA 1. KAT SERVER ODASI", null, null, null],
+  [85, "MAVİ YAKA -1 KAT DOLAP İÇİ", "6 KG KURU TOZ", null, null],
+  [86, "ATIK SAHASI", "50 KG KÖPÜK", null, null],
+  [87, "YEDEK", "6 KG KURU TOZ", null, null],
+  [88, "YEDEK", "5 KG KARBONDİOKSİT", null, null],
+  [89, "HİDRANT", null, null, null],
+  [90, "HİDRANT", null, null, null],
+].map(([no, yer, cins, dolum, skt]) => ({ no, yer, cins, dolum, skt }));
+
+const KONTROL_KALEMLERI = [
+  { key: "basinc", label: "Basınç ve doluluk uygun" },
+  { key: "pim", label: "Pim sağlam" },
+  { key: "manometre", label: "Manometre çalışıyor" },
+  { key: "hortum", label: "Hortum / lans sağlam" },
+];
+
+const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const AY_INDEX = { OCAK:0, ŞUBAT:1, SUBAT:1, MART:2, NİSAN:3, NISAN:3, MAYIS:4, HAZİRAN:5, HAZIRAN:5, TEMMUZ:6, AĞUSTOS:7, AGUSTOS:7, EYLÜL:8, EYLUL:8, EKİM:9, EKIM:9, KASIM:10, ARALIK:11 };
+
+const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const monthLabel = (key) => { const [y, m] = key.split("-"); return `${AYLAR[+m - 1]} ${y}`; };
+const shiftMonth = (key, delta) => { const [y, m] = key.split("-").map(Number); return monthKey(new Date(y, m - 1 + delta, 1)); };
+
+function sktDurum(skt) {
+  if (!skt) return null;
+  const parts = skt.trim().toUpperCase().split(/\s+/);
+  const mi = AY_INDEX[parts[0]]; const yil = parseInt(parts[1]);
+  if (mi === undefined || isNaN(yil)) return null;
+  const now = new Date();
+  const diff = (yil - now.getFullYear()) * 12 + (mi - now.getMonth());
+  if (diff < 0) return "gecmis";
+  if (diff <= 3) return "yaklasiyor";
+  return null;
+}
+
+export default function YanginTupuKontrol() {
+  const [tupler, setTupler] = useState([]);         // canlı tüp listesi (Firestore ile senkron)
+  const [checks, setChecks] = useState({});
+  const [tuplerHazir, setTuplerHazir] = useState(false);
+  const [checksHazir, setChecksHazir] = useState(false);
+  const [aktifAy, setAktifAy] = useState(monthKey(new Date()));
+  const [filtre, setFiltre] = useState("hepsi");
+  const [arama, setArama] = useState("");
+  const [seciliNo, setSeciliNo] = useState(null);
+  const [yeniTupAcik, setYeniTupAcik] = useState(false);
+  const [kaydediliyor, setKaydediliyor] = useState(false);
+  const [hata, setHata] = useState(null);
+
+  const loading = !tuplerHazir || !checksHazir;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (await tuplerBosMu()) await tuplerToplu(VARSAYILAN_TUPLER);
+      } catch (e) {
+        setHata("Firebase bağlantısı kurulamadı. .env dosyasındaki Firebase ayarlarını kontrol edin.");
+      }
+    })();
+    const unsubTupler = subscribeTupler((liste) => { setTupler(liste); setTuplerHazir(true); });
+    const unsubChecks = subscribeKontroller((c) => { setChecks(c); setChecksHazir(true); });
+    return () => { unsubTupler(); unsubChecks(); };
+  }, []);
+
+  async function tupGuncelle(no, alanlar) {
+    try { await tupGuncelleFirestore(no, alanlar); }
+    catch (e) { alert("Tüp güncellenirken bir hata oluştu, lütfen tekrar deneyin."); }
+  }
+
+  async function tupEkle(yeniTup) {
+    try {
+      const no = await tupEkleFirestore(yeniTup, tupler);
+      return no;
+    } catch (e) {
+      alert("Tüp eklenirken bir hata oluştu, lütfen tekrar deneyin.");
+      return null;
+    }
+  }
+
+  async function tupSil(no) {
+    try { await tupSilFirestore(no); }
+    catch (e) { alert("Tüp silinirken bir hata oluştu, lütfen tekrar deneyin."); }
+  }
+
+  const ayVerisi = checks[aktifAy] || {};
+  const durumOf = (no) => (ayVerisi[no] ? ayVerisi[no].durum : "bekliyor");
+
+  const sayilar = useMemo(() => {
+    let ok = 0, sorun = 0;
+    for (const t of tupler) {
+      const d = durumOf(t.no);
+      if (d === "ok") ok++; else if (d === "sorun") sorun++;
+    }
+    return { ok, sorun, bekliyor: tupler.length - ok - sorun, toplam: tupler.length };
+  }, [ayVerisi, tupler]);
+
+  const gorunen = useMemo(() => {
+    const q = arama.trim().toLocaleLowerCase("tr");
+    return tupler.filter((t) => {
+      const d = durumOf(t.no);
+      if (filtre === "ok" && d !== "ok") return false;
+      if (filtre === "sorun" && d !== "sorun") return false;
+      if (filtre === "bekliyor" && d !== "bekliyor") return false;
+      if (q && !`${t.no} ${t.yer || ""} ${t.cins || ""}`.toLocaleLowerCase("tr").includes(q)) return false;
+      return true;
+    }).sort((a, b) => a.no - b.no);
+  }, [filtre, arama, ayVerisi, tupler]);
+
+  async function kaydet(no, kayit) {
+    setKaydediliyor(true);
+    try {
+      await kaydetKontrol(aktifAy, no, kayit === null ? null : { ...kayit, tarih: kayit.tarih });
+    } catch (e) {
+      alert("Kayıt sırasında bir hata oluştu, lütfen tekrar deneyin.");
+    }
+    setKaydediliyor(false);
+  }
+
+  const seciliTup = seciliNo ? tupler.find((t) => t.no === seciliNo) : null;
+  const yuzde = sayilar.toplam ? Math.round(((sayilar.ok + sayilar.sorun) / sayilar.toplam) * 100) : 0;
+
+  return (
+    <div className="app">
+      <style>{CSS}</style>
+      <div className="blob b1" /><div className="blob b2" /><div className="blob b3" />
+
+      {hata && <div className="hataBand">{hata}</div>}
+
+      <header className="topBar">
+        <div className="topInner">
+          <div className="titleRow">
+            <div>
+              <div className="eyebrow">FR.43.17 · Aylık Kontrol</div>
+              <h1 className="title">Yangın Tüpleri</h1>
+            </div>
+            <div className="monthPicker">
+              <button className="mBtn" onClick={() => setAktifAy(shiftMonth(aktifAy, -1))} aria-label="Önceki ay">‹</button>
+              <span className="mLabel">{monthLabel(aktifAy)}</span>
+              <button className="mBtn" onClick={() => setAktifAy(shiftMonth(aktifAy, 1))} aria-label="Sonraki ay">›</button>
+            </div>
+          </div>
+
+          <div className="statRow">
+            <div className="ring" style={{ "--p": yuzde }}><span>{yuzde}%</span></div>
+            <div className="statText">
+              <div className="statBig">{sayilar.ok + sayilar.sorun} <span className="statDim">/ {sayilar.toplam} tüp kontrol edildi</span></div>
+              <div className="statSub">
+                <span className="dot ok" /> {sayilar.ok} uygun&nbsp;&nbsp;
+                <span className="dot sorun" /> {sayilar.sorun} sorunlu&nbsp;&nbsp;
+                <span className="dot bekliyor" /> {sayilar.bekliyor} bekliyor
+              </div>
+            </div>
+            <button className="addBtn" onClick={() => setYeniTupAcik(true)}>
+              <span className="addPlus">+</span><span className="addTxt">Yeni tüp</span>
+            </button>
+          </div>
+
+          <div className="controls">
+            <div className="segment">
+              {[["hepsi","Tümü"],["bekliyor","Bekliyor"],["ok","Uygun"],["sorun","Sorunlu"]].map(([k,l]) => (
+                <button key={k} className={`seg ${filtre===k?"segOn":""} seg-${k}`} onClick={() => setFiltre(k)}>{l}</button>
+              ))}
+            </div>
+            <input className="search" placeholder="Ara — no veya yer" value={arama} onChange={(e)=>setArama(e.target.value)} />
+          </div>
+        </div>
+      </header>
+
+      <main className="grid">
+        {loading ? (
+          <div className="empty">Kayıtlar yükleniyor…</div>
+        ) : gorunen.length === 0 ? (
+          <div className="empty">Bu filtreye uyan tüp yok.</div>
+        ) : gorunen.map((t) => {
+          const d = durumOf(t.no);
+          const skt = sktDurum(t.skt);
+          return (
+            <button key={t.no} className={`card ${d}`} onClick={() => setSeciliNo(t.no)}>
+              <div className={`badge ${d}`}>{t.no}</div>
+              <div className="cardBody">
+                <div className="cardLoc">{t.yer || "—"}</div>
+                <div className="cardMeta">
+                  <span>{t.cins || "Cinsi belirtilmemiş"}</span>
+                  {skt === "gecmis" && <span className="pill pillRed">SKT geçmiş</span>}
+                  {skt === "yaklasiyor" && <span className="pill pillAmber">SKT yakın</span>}
+                </div>
+              </div>
+              <div className={`mark ${d}`}>{d === "ok" ? "✓" : d === "sorun" ? "!" : "›"}</div>
+            </button>
+          );
+        })}
+      </main>
+
+      {seciliTup && (
+        <TupModal
+          tup={seciliTup} ay={aktifAy}
+          mevcut={ayVerisi[seciliTup.no] || null}
+          gecmis={checks} kaydediliyor={kaydediliyor}
+          onKaydet={(kayit) => kaydet(seciliTup.no, kayit)}
+          onGuncelle={(alanlar) => tupGuncelle(seciliTup.no, alanlar)}
+          onSil={() => { tupSil(seciliTup.no); setSeciliNo(null); }}
+          onKapat={() => setSeciliNo(null)}
+        />
+      )}
+
+      {yeniTupAcik && (
+        <YeniTupModal
+          onEkle={async (veri) => { const no = await tupEkle(veri); setYeniTupAcik(false); if (no) setSeciliNo(no); }}
+          onKapat={() => setYeniTupAcik(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function TupModal({ tup, ay, mevcut, gecmis, kaydediliyor, onKaydet, onGuncelle, onSil, onKapat }) {
+  const { no, yer, cins, dolum, skt } = tup;
+  const init = () => {
+    const base = {};
+    for (const k of KONTROL_KALEMLERI) base[k.key] = mevcut?.items?.[k.key] ?? true;
+    return base;
+  };
+  const [items, setItems] = useState(init);
+  const [digerSorun, setDigerSorun] = useState(mevcut?.digerSorun ?? false);
+  const [not, setNot] = useState(mevcut?.not ?? "");
+  const [duzenleAcik, setDuzenleAcik] = useState(false);
+  const [taslak, setTaslak] = useState({ yer: yer || "", cins: cins || "", dolum: dolum || "", skt: skt || "" });
+  const [silOnay, setSilOnay] = useState(false);
+
+  useEffect(() => {
+    setItems(init()); setDigerSorun(mevcut?.digerSorun ?? false); setNot(mevcut?.not ?? "");
+    setTaslak({ yer: yer || "", cins: cins || "", dolum: dolum || "", skt: skt || "" });
+    setDuzenleAcik(false); setSilOnay(false);
+  }, [no, ay]);
+
+  const sorunVar = digerSorun || KONTROL_KALEMLERI.some((k) => items[k.key] === false);
+  const sktD = sktDurum(skt);
+
+  function kaydetTikla() {
+    onKaydet({ durum: sorunVar ? "sorun" : "ok", items, digerSorun, not: not.trim(), tarih: new Date().toISOString() });
+    onKapat();
+  }
+
+  function duzenlemeKaydet() {
+    onGuncelle({
+      yer: taslak.yer.trim(),
+      cins: taslak.cins.trim() || null,
+      dolum: taslak.dolum.trim() || null,
+      skt: taslak.skt.trim() || null,
+    });
+    setDuzenleAcik(false);
+  }
+
+  const gecmisKayitlar = Object.keys(gecmis).filter((m) => gecmis[m]?.[no]).sort().reverse();
+
+  return (
+    <div className="overlay" onClick={onKapat}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grabber" />
+
+        {!duzenleAcik ? (
+          <>
+            <div className="sheetHead">
+              <div className={`badge big ${mevcut ? mevcut.durum : "bekliyor"}`}>{no}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="sheetLoc">{yer || "—"}</div>
+                <div className="sheetType">{cins || "Cinsi belirtilmemiş"}</div>
+              </div>
+              <button className="iconBtn" onClick={() => setDuzenleAcik(true)} aria-label="Düzenle" title="Düzenle">✎</button>
+              <button className="closeBtn" onClick={onKapat} aria-label="Kapat">✕</button>
+            </div>
+
+            <div className="infoRow">
+              <div className="infoBox"><span className="infoLbl">Dolum</span><span className="infoVal">{dolum || "—"}</span></div>
+              <div className="infoBox">
+                <span className="infoLbl">Son kullanma</span>
+                <span className="infoVal" style={{ color: sktD === "gecmis" ? "var(--red)" : sktD === "yaklasiyor" ? "var(--amber)" : undefined }}>
+                  {skt || "—"}
+                </span>
+              </div>
+            </div>
+            {sktD === "gecmis" && <div className="warnBand">Son kullanma tarihi geçmiş — dolum / değişim planlanmalı.</div>}
+
+            <div className="secTitle">{monthLabel(ay)} kontrolü</div>
+            <div className="checkGroup">
+              {KONTROL_KALEMLERI.map((k) => (
+                <div key={k.key} className="checkRow">
+                  <span className="checkLbl">{k.label}</span>
+                  <div className="miniSeg">
+                    <button className={`ms ${items[k.key] ? "msOk" : ""}`} onClick={() => setItems({ ...items, [k.key]: true })}>Uygun</button>
+                    <button className={`ms ${!items[k.key] ? "msBad" : ""}`} onClick={() => setItems({ ...items, [k.key]: false })}>Sorunlu</button>
+                  </div>
+                </div>
+              ))}
+              <div className="checkRow">
+                <span className="checkLbl">Başka bir sorun var</span>
+                <div className="miniSeg">
+                  <button className={`ms ${!digerSorun ? "msOk" : ""}`} onClick={() => setDigerSorun(false)}>Hayır</button>
+                  <button className={`ms ${digerSorun ? "msBad" : ""}`} onClick={() => setDigerSorun(true)}>Evet</button>
+                </div>
+              </div>
+            </div>
+
+            <textarea className="note" rows={2} placeholder="Not (isteğe bağlı) — ör. manometre iğnesi kırmızıda…" value={not} onChange={(e) => setNot(e.target.value)} />
+
+            <div className="btnRow">
+              <button className={`saveBtn ${sorunVar ? "saveBad" : "saveOk"}`} onClick={kaydetTikla} disabled={kaydediliyor}>
+                {kaydediliyor ? "Kaydediliyor…" : sorunVar ? "Sorunlu olarak kaydet" : "Kontrol edildi olarak kaydet"}
+              </button>
+              {mevcut && (
+                <button className="delBtn" onClick={() => { onKaydet(null); onKapat(); }} disabled={kaydediliyor}>Ay kaydını sil</button>
+              )}
+            </div>
+
+            <div className="secTitle">Geçmiş kontroller</div>
+            {gecmisKayitlar.length === 0 ? (
+              <div className="histEmpty">Bu tüp için henüz kayıtlı kontrol yok.</div>
+            ) : (
+              <div className="histList">
+                {gecmisKayitlar.map((m) => {
+                  const k = gecmis[m][no];
+                  const bozuk = KONTROL_KALEMLERI.filter((kk) => k.items?.[kk.key] === false).map((kk) => kk.label);
+                  if (k.digerSorun) bozuk.push("Diğer sorun");
+                  return (
+                    <div key={m} className="histRow">
+                      <span className={`dot ${k.durum}`} style={{ marginTop: 6 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="histMonth">
+                          {monthLabel(m)}
+                          <span className={k.durum === "ok" ? "histOk" : "histBad"}>{k.durum === "ok" ? "Sorun yok" : "Sorunlu"}</span>
+                        </div>
+                        {bozuk.length > 0 && <div className="histIssues">{bozuk.join(" · ")}</div>}
+                        {k.not && <div className="histNote">"{k.not}"</div>}
+                      </div>
+                      <div className="histDate">{k.tarih ? new Date(k.tarih).toLocaleDateString("tr-TR") : ""}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="dangerZone">
+              {!silOnay ? (
+                <button className="ghostDanger" onClick={() => setSilOnay(true)}>Bu tüpü kalıcı olarak sil</button>
+              ) : (
+                <div className="confirmRow">
+                  <span className="confirmTxt">Emin misin? Tüm geçmiş kayıtları da silinecek.</span>
+                  <div className="confirmBtns">
+                    <button className="confirmNo" onClick={() => setSilOnay(false)}>Vazgeç</button>
+                    <button className="confirmYes" onClick={onSil}>Evet, sil</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="sheetHead">
+              <div className="badge big bekliyor">{no}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="sheetLoc">Tüpü düzenle</div>
+                <div className="sheetType">No: {no}</div>
+              </div>
+              <button className="closeBtn" onClick={() => setDuzenleAcik(false)} aria-label="Vazgeç">✕</button>
+            </div>
+
+            <div className="formGroup">
+              <label className="formLbl">Bulunduğu yer</label>
+              <input className="formInput" value={taslak.yer} onChange={(e) => setTaslak({ ...taslak, yer: e.target.value })} placeholder="Örn. ÜST KAT ORTA KOLON" />
+
+              <label className="formLbl">Cinsi / kapasitesi</label>
+              <input className="formInput" value={taslak.cins} onChange={(e) => setTaslak({ ...taslak, cins: e.target.value })} placeholder="Örn. 6 KG KURU TOZ" />
+
+              <div className="formRow2">
+                <div style={{ flex: 1 }}>
+                  <label className="formLbl">Dolum tarihi</label>
+                  <input className="formInput" value={taslak.dolum} onChange={(e) => setTaslak({ ...taslak, dolum: e.target.value })} placeholder="Örn. OCAK 2025" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label className="formLbl">Son kullanma</label>
+                  <input className="formInput" value={taslak.skt} onChange={(e) => setTaslak({ ...taslak, skt: e.target.value })} placeholder="Örn. OCAK 2029" />
+                </div>
+              </div>
+            </div>
+
+            <div className="btnRow">
+              <button className="saveBtn saveOk" onClick={duzenlemeKaydet} disabled={!taslak.yer.trim()}>Değişiklikleri kaydet</button>
+              <button className="delBtn" onClick={() => setDuzenleAcik(false)}>Vazgeç</button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function YeniTupModal({ onEkle, onKapat }) {
+  const [taslak, setTaslak] = useState({ yer: "", cins: "", dolum: "", skt: "" });
+  const [gonderiliyor, setGonderiliyor] = useState(false);
+
+  async function eklemeYap() {
+    if (!taslak.yer.trim()) return;
+    setGonderiliyor(true);
+    await onEkle({
+      yer: taslak.yer.trim(),
+      cins: taslak.cins.trim() || null,
+      dolum: taslak.dolum.trim() || null,
+      skt: taslak.skt.trim() || null,
+    });
+    setGonderiliyor(false);
+  }
+
+  return (
+    <div className="overlay" onClick={onKapat}>
+      <div className="sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="grabber" />
+        <div className="sheetHead">
+          <div className="badge big bekliyor">+</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="sheetLoc">Yeni tüp ekle</div>
+            <div className="sheetType">Listeye yeni bir yangın tüpü kaydet</div>
+          </div>
+          <button className="closeBtn" onClick={onKapat} aria-label="Kapat">✕</button>
+        </div>
+
+        <div className="formGroup">
+          <label className="formLbl">Bulunduğu yer *</label>
+          <input className="formInput" autoFocus value={taslak.yer} onChange={(e) => setTaslak({ ...taslak, yer: e.target.value })} placeholder="Örn. YENİ DEPO GİRİŞİ" />
+
+          <label className="formLbl">Cinsi / kapasitesi</label>
+          <input className="formInput" value={taslak.cins} onChange={(e) => setTaslak({ ...taslak, cins: e.target.value })} placeholder="Örn. 6 KG KURU TOZ" />
+
+          <div className="formRow2">
+            <div style={{ flex: 1 }}>
+              <label className="formLbl">Dolum tarihi</label>
+              <input className="formInput" value={taslak.dolum} onChange={(e) => setTaslak({ ...taslak, dolum: e.target.value })} placeholder="Örn. TEMMUZ 2026" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="formLbl">Son kullanma</label>
+              <input className="formInput" value={taslak.skt} onChange={(e) => setTaslak({ ...taslak, skt: e.target.value })} placeholder="Örn. TEMMUZ 2030" />
+            </div>
+          </div>
+        </div>
+
+        <div className="btnRow">
+          <button className="saveBtn saveOk" onClick={eklemeYap} disabled={!taslak.yer.trim() || gonderiliyor}>
+            {gonderiliyor ? "Ekleniyor…" : "Tüpü listeye ekle"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CSS = `
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+
+:root {
+  --ink: #1D1D1F;
+  --gray: #6E6E73;
+  --hairline: rgba(0,0,0,.08);
+  --glass: rgba(255,255,255,.58);
+  --glass-strong: rgba(255,255,255,.72);
+  --green: #34C759;
+  --green-deep: #248A3D;
+  --red: #FF3B30;
+  --red-deep: #D70015;
+  --amber: #B25000;
+  --blue: #0071E3;
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 12px;
+}
+
+.app {
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, #EEF1F6 0%, #E8ECF3 40%, #EDEAF2 100%);
+  padding-bottom: 80px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.blob { position: fixed; border-radius: 50%; filter: blur(90px); opacity: .5; pointer-events: none; z-index: 0; }
+.b1 { width: 480px; height: 480px; background: #FFD6CF; top: -140px; right: -120px; }
+.b2 { width: 420px; height: 420px; background: #CFE3FF; top: 30%; left: -160px; }
+.b3 { width: 380px; height: 380px; background: #DFF5E1; bottom: -120px; right: 15%; }
+
+.hataBand {
+  position: relative; z-index: 30; text-align: center; padding: 10px 16px;
+  background: var(--red); color: #fff; font-weight: 600; font-size: 13.5px;
+}
+
+.topBar {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(250,250,252,.65);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-bottom: 0.5px solid var(--hairline);
+}
+.topInner { max-width: 1080px; margin: 0 auto; padding: 14px 18px 12px; }
+.titleRow { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--gray); }
+.title { margin: 1px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -.4px; }
+
+.monthPicker {
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(120,120,128,.12); border-radius: 12px; padding: 3px;
+}
+.mBtn {
+  width: 34px; height: 34px; border: none; border-radius: 9px; cursor: pointer;
+  background: transparent; font-size: 20px; color: var(--blue); line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.mBtn:active { background: rgba(120,120,128,.16); }
+.mLabel { min-width: 116px; text-align: center; font-weight: 600; font-size: 15px; }
+
+.statRow { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.ring {
+  width: 54px; height: 54px; border-radius: 50%; flex-shrink: 0;
+  background: conic-gradient(var(--green) calc(var(--p) * 1%), rgba(120,120,128,.15) 0);
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.ring::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: rgba(250,250,252,.9); }
+.ring span { position: relative; font-size: 13px; font-weight: 700; }
+.statText { flex: 1; min-width: 0; }
+.statBig { font-size: 17px; font-weight: 700; letter-spacing: -.2px; }
+.statDim { font-weight: 500; color: var(--gray); font-size: 14px; }
+.statSub { font-size: 13px; color: var(--gray); margin-top: 2px; display: flex; align-items: center; flex-wrap: wrap; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; flex-shrink: 0; }
+.dot.ok { background: var(--green); }
+.dot.sorun { background: var(--red); }
+.dot.bekliyor { background: rgba(120,120,128,.4); }
+
+.addBtn {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: var(--blue); color: #fff; border: none; border-radius: 12px;
+  padding: 9px 15px 9px 12px; cursor: pointer; font-family: inherit;
+  font-size: 13.5px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,113,227,.3);
+  transition: transform .12s, filter .12s;
+}
+.addBtn:hover { filter: brightness(1.05); }
+.addBtn:active { transform: scale(.97); }
+.addPlus { font-size: 17px; font-weight: 700; line-height: 1; }
+
+.controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.segment {
+  display: flex; background: rgba(120,120,128,.12); border-radius: 11px; padding: 2.5px; gap: 2px;
+  overflow-x: auto; max-width: 100%;
+}
+.seg {
+  border: none; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink);
+  padding: 7px 14px; border-radius: 9px; white-space: nowrap; transition: all .15s;
+}
+.segOn { background: rgba(255,255,255,.95); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.segOn.seg-ok { color: var(--green-deep); }
+.segOn.seg-sorun { color: var(--red-deep); }
+
+.search {
+  flex: 1; min-width: 150px; padding: 9px 14px; font-size: 14px; font-family: inherit;
+  border: none; border-radius: 11px; background: rgba(120,120,128,.12); color: var(--ink);
+  outline: none; transition: background .15s, box-shadow .15s;
+}
+.search::placeholder { color: var(--gray); }
+.search:focus { background: rgba(255,255,255,.9); box-shadow: 0 0 0 3px rgba(0,113,227,.25); }
+
+.grid {
+  max-width: 1080px; margin: 18px auto 0; padding: 0 18px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px;
+  position: relative; z-index: 1;
+}
+.empty { grid-column: 1/-1; text-align: center; color: var(--gray); padding: 48px 0; font-size: 15px; }
+
+.card {
+  display: flex; align-items: center; gap: 13px; text-align: left;
+  padding: 13px 14px; cursor: pointer; font-family: inherit; color: inherit;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border: 0.5px solid rgba(255,255,255,.7);
+  border-radius: var(--r-md);
+  box-shadow: 0 2px 10px rgba(30,35,50,.06);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.card:hover { transform: translateY(-2px) scale(1.005); box-shadow: 0 8px 24px rgba(30,35,50,.12); }
+.card:active { transform: scale(.985); }
+.card:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.card.sorun { background: rgba(255,235,233,.6); border-color: rgba(255,59,48,.25); }
+.card.ok { border-color: rgba(52,199,89,.3); }
+
+.badge {
+  min-width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 700; letter-spacing: -.5px;
+  background: rgba(120,120,128,.14); color: var(--ink);
+}
+.badge.ok { background: var(--green); color: #fff; box-shadow: 0 3px 10px rgba(52,199,89,.35); }
+.badge.sorun { background: var(--red); color: #fff; box-shadow: 0 3px 10px rgba(255,59,48,.35); }
+.badge.big { min-width: 54px; height: 54px; font-size: 24px; border-radius: 15px; }
+
+.cardBody { flex: 1; min-width: 0; }
+.cardLoc { font-weight: 600; font-size: 14.5px; letter-spacing: -.1px; line-height: 1.28; }
+.cardMeta { display: flex; align-items: center; gap: 7px; margin-top: 3px; flex-wrap: wrap; font-size: 12px; color: var(--gray); font-weight: 500; }
+
+.pill { font-size: 10.5px; font-weight: 700; padding: 2.5px 8px; border-radius: 999px; letter-spacing: .2px; }
+.pillRed { background: rgba(255,59,48,.14); color: var(--red-deep); }
+.pillAmber { background: rgba(255,159,10,.18); color: var(--amber); }
+
+.mark { font-size: 17px; font-weight: 700; width: 22px; text-align: center; flex-shrink: 0; color: rgba(120,120,128,.5); }
+.mark.ok { color: var(--green-deep); }
+.mark.sorun { color: var(--red-deep); }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(20,22,30,.35);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: fadeIn .18s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } }
+
+.sheet {
+  width: 100%; max-width: 540px; max-height: 88vh; overflow-y: auto;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
+  border: 0.5px solid rgba(255,255,255,.8);
+  border-radius: 24px; padding: 20px 20px 24px;
+  box-shadow: 0 30px 80px rgba(10,15,30,.35);
+  animation: popIn .22s cubic-bezier(.32,1.25,.5,1);
+}
+@keyframes popIn { from { opacity: 0; transform: scale(.94); } }
+.grabber { display: none; }
+
+.sheetHead { display: flex; align-items: center; gap: 12px; }
+.sheetLoc { font-weight: 700; font-size: 17px; letter-spacing: -.2px; line-height: 1.22; }
+.sheetType { font-size: 12.5px; color: var(--gray); font-weight: 500; margin-top: 2px; }
+.closeBtn, .iconBtn {
+  width: 32px; height: 32px; border: none; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+  background: rgba(120,120,128,.16); color: var(--gray); font-size: 13px; font-weight: 700;
+}
+.iconBtn { font-size: 15px; color: var(--blue); background: rgba(0,113,227,.12); }
+.closeBtn:hover { background: rgba(120,120,128,.24); color: var(--ink); }
+.iconBtn:hover { background: rgba(0,113,227,.2); }
+
+.infoRow { display: flex; gap: 10px; margin-top: 16px; }
+.infoBox {
+  flex: 1; display: flex; flex-direction: column; gap: 2px;
+  background: rgba(255,255,255,.55); border: 0.5px solid rgba(255,255,255,.7);
+  border-radius: var(--r-sm); padding: 9px 13px;
+}
+.infoLbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--gray); }
+.infoVal { font-weight: 700; font-size: 14px; }
+
+.warnBand {
+  margin-top: 10px; padding: 9px 13px; border-radius: var(--r-sm);
+  background: rgba(255,59,48,.12); color: var(--red-deep);
+  font-size: 13px; font-weight: 600; border: 0.5px solid rgba(255,59,48,.2);
+}
+
+.secTitle { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gray); margin: 22px 0 9px; }
+
+.checkGroup { display: flex; flex-direction: column; gap: 8px; }
+.checkRow {
+  display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+  font-size: 14px; background: rgba(255,255,255,.6);
+  border: 0.5px solid rgba(255,255,255,.8);
+  border-radius: var(--r-sm);
+  box-shadow: 0 1px 3px rgba(30,35,50,.05);
+  transition: box-shadow .15s, background .15s;
+}
+.checkRow:hover { background: rgba(255,255,255,.75); box-shadow: 0 3px 10px rgba(30,35,50,.08); }
+.checkLbl { flex: 1; font-weight: 600; letter-spacing: -.1px; }
+
+.miniSeg { display: flex; background: rgba(120,120,128,.14); border-radius: 10px; padding: 3px; gap: 3px; flex-shrink: 0; }
+.ms {
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: 12.5px; font-weight: 700; color: var(--gray);
+  padding: 6px 13px; border-radius: 8px; transition: all .15s; letter-spacing: -.1px;
+}
+.ms:hover { color: var(--ink); }
+.msOk { background: var(--green); color: #fff; box-shadow: 0 2px 6px rgba(52,199,89,.45); }
+.msOk:hover { color: #fff; }
+.msBad { background: var(--red); color: #fff; box-shadow: 0 2px 6px rgba(255,59,48,.45); }
+.msBad:hover { color: #fff; }
+
+.note {
+  width: 100%; margin-top: 12px; padding: 11px 14px; font-family: inherit; font-size: 14px;
+  border: 0.5px solid rgba(255,255,255,.7); border-radius: var(--r-sm);
+  background: rgba(255,255,255,.55); color: var(--ink); resize: vertical; outline: none;
+}
+.note::placeholder { color: var(--gray); }
+.note:focus { background: rgba(255,255,255,.85); box-shadow: 0 0 0 3px rgba(0,113,227,.22); }
+
+.btnRow { display: flex; gap: 9px; margin-top: 14px; flex-wrap: wrap; }
+.saveBtn {
+  flex: 1; min-width: 190px; padding: 13px 18px; border: none; border-radius: 14px; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.1px;
+  transition: transform .12s, filter .12s;
+}
+.saveBtn:active:not(:disabled) { transform: scale(.98); }
+.saveBtn:disabled { opacity: .55; cursor: default; }
+.saveOk { background: var(--green); box-shadow: 0 6px 18px rgba(52,199,89,.35); }
+.saveOk:hover:not(:disabled) { filter: brightness(.95); }
+.saveBad { background: var(--red); box-shadow: 0 6px 18px rgba(255,59,48,.35); }
+.saveBad:hover:not(:disabled) { filter: brightness(.95); }
+
+.delBtn {
+  padding: 13px 16px; border-radius: 14px; cursor: pointer; font-family: inherit;
+  font-size: 13.5px; font-weight: 600; color: var(--red-deep);
+  background: rgba(255,59,48,.1); border: none;
+}
+.delBtn:hover:not(:disabled) { background: rgba(255,59,48,.16); }
+
+.histEmpty { font-size: 13.5px; color: var(--gray); }
+.histList { display: flex; flex-direction: column; gap: 4px; }
+.histRow {
+  display: flex; gap: 11px; align-items: flex-start; padding: 10px 13px;
+  background: rgba(255,255,255,.5); border: 0.5px solid rgba(255,255,255,.65);
+  border-radius: var(--r-sm);
+}
+.histMonth { font-weight: 600; font-size: 14px; }
+.histOk { color: var(--green-deep); font-weight: 700; margin-left: 8px; font-size: 13px; }
+.histBad { color: var(--red-deep); font-weight: 700; margin-left: 8px; font-size: 13px; }
+.histIssues { font-size: 12.5px; color: var(--red-deep); margin-top: 2px; font-weight: 500; }
+.histNote { font-size: 13px; color: var(--gray); margin-top: 2px; font-style: italic; }
+.histDate { font-size: 11.5px; color: var(--gray); white-space: nowrap; padding-top: 3px; }
+
+.formGroup { display: flex; flex-direction: column; margin-top: 16px; }
+.formLbl {
+  display: block; font-size: 12px; font-weight: 700; color: var(--gray);
+  text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 6px;
+}
+.formGroup > .formLbl:first-child { margin-top: 0; }
+.formInput {
+  display: block; width: 100%; min-width: 0; padding: 12px 14px;
+  font-family: inherit; font-size: 15px; font-weight: 500;
+  border: 0.5px solid rgba(255,255,255,.8); border-radius: var(--r-sm);
+  background: rgba(255,255,255,.65); color: var(--ink); outline: none;
+  box-shadow: 0 1px 3px rgba(30,35,50,.05);
+  transition: background .15s, box-shadow .15s;
+}
+.formInput::placeholder { color: rgba(110,110,115,.65); font-weight: 400; }
+.formInput:focus { background: rgba(255,255,255,.95); box-shadow: 0 0 0 3px rgba(0,113,227,.22); }
+.formRow2 { display: flex; gap: 10px; align-items: flex-start; }
+.formRow2 > div { min-width: 0; flex: 1; }
+
+.dangerZone { margin-top: 22px; padding-top: 14px; border-top: 0.5px solid var(--hairline); }
+.ghostDanger {
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 13px; font-weight: 600; color: var(--red-deep); opacity: .75; padding: 4px 0;
+}
+.ghostDanger:hover { opacity: 1; text-decoration: underline; }
+.confirmRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.confirmTxt { font-size: 13px; color: var(--red-deep); font-weight: 600; flex: 1; }
+.confirmBtns { display: flex; gap: 8px; }
+.confirmNo, .confirmYes {
+  border: none; border-radius: 9px; padding: 7px 13px; font-family: inherit;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.confirmNo { background: rgba(120,120,128,.15); color: var(--ink); }
+.confirmYes { background: var(--red); color: #fff; }
+
+@media (max-width: 640px) {
+  .title { font-size: 22px; }
+  .topInner { padding: 12px 14px 10px; }
+  .grid { padding: 0 12px; gap: 9px; grid-template-columns: 1fr; margin-top: 14px; }
+  .card { padding: 12px; }
+  .statRow { gap: 10px; flex-wrap: wrap; }
+  .ring { width: 48px; height: 48px; }
+  .addBtn { padding: 9px 12px; }
+  .addTxt { display: none; }
+  .controls { gap: 8px; }
+  .search { min-width: 100%; order: 2; }
+  .segment { width: 100%; }
+  .seg { flex: 1; padding: 7px 6px; font-size: 12.5px; }
+
+  .overlay { align-items: flex-end; padding: 0; }
+  .sheet {
+    max-width: 100%; max-height: 92vh;
+    border-radius: 24px 24px 0 0;
+    padding: 10px 16px calc(24px + env(safe-area-inset-bottom));
+    animation: slideUp .28s cubic-bezier(.32,1.15,.5,1);
+  }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } }
+  .grabber {
+    display: block; width: 38px; height: 5px; border-radius: 3px;
+    background: rgba(120,120,128,.3); margin: 0 auto 14px;
+  }
+  .checkRow { flex-wrap: wrap; }
+  .miniSeg { margin-left: auto; }
+  .saveBtn { min-width: 100%; }
+  .delBtn { width: 100%; }
+  .formRow2 { flex-direction: column; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .seg, .ms, .saveBtn, .addBtn { transition: none; }
+  .sheet, .overlay { animation: none; }
+}
+`;
