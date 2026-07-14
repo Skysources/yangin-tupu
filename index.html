@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yangın Tüpleri Kontrol</title>
+<style>
+* { -webkit-tap-highlight-color: transparent; box-sizing: border-box; margin:0; padding:0; }
+
+:root {
+  --ink: #1D1D1F;
+  --gray: #6E6E73;
+  --hairline: rgba(0,0,0,.08);
+  --glass: rgba(255,255,255,.58);
+  --glass-strong: rgba(255,255,255,.72);
+  --green: #34C759;
+  --green-deep: #248A3D;
+  --red: #FF3B30;
+  --red-deep: #D70015;
+  --amber: #B25000;
+  --blue: #0071E3;
+  --r-lg: 22px;
+  --r-md: 16px;
+  --r-sm: 12px;
+}
+
+body {
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, #EEF1F6 0%, #E8ECF3 40%, #EDEAF2 100%);
+  padding-bottom: 80px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.blob { position: fixed; border-radius: 50%; filter: blur(90px); opacity: .5; pointer-events: none; z-index: 0; }
+.b1 { width: 480px; height: 480px; background: #FFD6CF; top: -140px; right: -120px; }
+.b2 { width: 420px; height: 420px; background: #CFE3FF; top: 30%; left: -160px; }
+.b3 { width: 380px; height: 380px; background: #DFF5E1; bottom: -120px; right: 15%; }
+
+/* TOPBAR */
+.topBar {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(250,250,252,.65);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border-bottom: 0.5px solid var(--hairline);
+}
+.topInner { max-width: 1080px; margin: 0 auto; padding: 14px 18px 12px; }
+.titleRow { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .8px; text-transform: uppercase; color: var(--gray); }
+.title { margin: 1px 0 0; font-size: 26px; font-weight: 700; letter-spacing: -.4px; }
+
+.monthPicker {
+  display: flex; align-items: center; gap: 2px;
+  background: rgba(120,120,128,.12); border-radius: 12px; padding: 3px;
+}
+.mBtn {
+  width: 34px; height: 34px; border: none; border-radius: 9px; cursor: pointer;
+  background: transparent; font-size: 20px; color: var(--blue); line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.mBtn:active { background: rgba(120,120,128,.16); }
+.mLabel { min-width: 116px; text-align: center; font-weight: 600; font-size: 15px; }
+
+.statRow { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+.ring {
+  width: 54px; height: 54px; border-radius: 50%; flex-shrink: 0;
+  background: conic-gradient(var(--green) var(--p, 0%), rgba(120,120,128,.15) 0);
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.ring::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: rgba(250,250,252,.9); }
+.ring span { position: relative; font-size: 13px; font-weight: 700; }
+.statText { flex: 1; min-width: 0; }
+.statBig { font-size: 17px; font-weight: 700; letter-spacing: -.2px; }
+.statDim { font-weight: 500; color: var(--gray); font-size: 14px; }
+.statSub { font-size: 13px; color: var(--gray); margin-top: 2px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot.ok { background: var(--green); }
+.dot.sorun { background: var(--red); }
+.dot.bekliyor { background: rgba(120,120,128,.4); }
+
+.addBtn {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: var(--blue); color: #fff; border: none; border-radius: 12px;
+  padding: 9px 15px 9px 12px; cursor: pointer; font-family: inherit;
+  font-size: 13.5px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,113,227,.3);
+  transition: transform .12s, filter .12s;
+}
+.addBtn:hover { filter: brightness(1.05); }
+.addBtn:active { transform: scale(.97); }
+.addPlus { font-size: 17px; font-weight: 700; line-height: 1; }
+
+.controls { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: center; }
+.segment {
+  display: flex; background: rgba(120,120,128,.12); border-radius: 11px; padding: 2.5px; gap: 2px;
+}
+.seg {
+  border: none; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink);
+  padding: 7px 14px; border-radius: 9px; white-space: nowrap; transition: all .15s;
+}
+.segOn { background: rgba(255,255,255,.95); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+.segOn.seg-ok { color: var(--green-deep); }
+.segOn.seg-sorun { color: var(--red-deep); }
+
+.search {
+  flex: 1; min-width: 150px; padding: 9px 14px; font-size: 14px; font-family: inherit;
+  border: none; border-radius: 11px; background: rgba(120,120,128,.12); color: var(--ink);
+  outline: none; transition: background .15s, box-shadow .15s;
+}
+.search::placeholder { color: var(--gray); }
+.search:focus { background: rgba(255,255,255,.9); box-shadow: 0 0 0 3px rgba(0,113,227,.25); }
+
+/* GRID */
+.grid {
+  max-width: 1080px; margin: 18px auto 0; padding: 0 18px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px;
+  position: relative; z-index: 1;
+}
+.empty { grid-column: 1/-1; text-align: center; color: var(--gray); padding: 48px 0; font-size: 15px; }
+
+/* CARD */
+.card {
+  display: flex; align-items: center; gap: 13px; text-align: left;
+  padding: 13px 14px; cursor: pointer; font-family: inherit; color: inherit;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border: 0.5px solid rgba(255,255,255,.7);
+  border-radius: var(--r-md);
+  box-shadow: 0 2px 10px rgba(30,35,50,.06);
+  transition: transform .15s ease, box-shadow .15s ease;
+  width: 100%;
+}
+.card:hover { transform: translateY(-2px) scale(1.005); box-shadow: 0 8px 24px rgba(30,35,50,.12); }
+.card:active { transform: scale(.985); }
+.card.sorun { background: rgba(255,235,233,.6); border-color: rgba(255,59,48,.25); }
+.card.ok { border-color: rgba(52,199,89,.3); }
+
+.badge {
+  min-width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; letter-spacing: -.5px;
+  background: rgba(120,120,128,.14); color: var(--ink);
+}
+.badge.ok { background: var(--green); color: #fff; box-shadow: 0 3px 10px rgba(52,199,89,.35); }
+.badge.sorun { background: var(--red); color: #fff; box-shadow: 0 3px 10px rgba(255,59,48,.35); }
+.badge.big { min-width: 54px; height: 54px; font-size: 22px; border-radius: 15px; }
+
+.cardBody { flex: 1; min-width: 0; }
+.cardLoc { font-weight: 600; font-size: 14px; letter-spacing: -.1px; line-height: 1.28; }
+.cardMeta { display: flex; align-items: center; gap: 7px; margin-top: 3px; flex-wrap: wrap; font-size: 12px; color: var(--gray); font-weight: 500; }
+.pill { font-size: 10.5px; font-weight: 700; padding: 2.5px 8px; border-radius: 999px; letter-spacing: .2px; }
+.pillRed { background: rgba(255,59,48,.14); color: var(--red-deep); }
+.pillAmber { background: rgba(255,159,10,.18); color: var(--amber); }
+.mark { font-size: 17px; font-weight: 700; width: 22px; text-align: center; flex-shrink: 0; color: rgba(120,120,128,.5); }
+.mark.ok { color: var(--green-deep); }
+.mark.sorun { color: var(--red-deep); }
+
+/* OVERLAY */
+.overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(20,22,30,.35);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  display: none; align-items: center; justify-content: center; padding: 20px;
+  animation: fadeIn .18s ease;
+}
+.overlay.show { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } }
+
+/* SHEET */
+.sheet {
+  width: 100%; max-width: 540px; max-height: 88vh; overflow-y: auto;
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
+  border: 0.5px solid rgba(255,255,255,.8);
+  border-radius: 24px; padding: 20px 20px 24px;
+  box-shadow: 0 30px 80px rgba(10,15,30,.35);
+  animation: popIn .22s cubic-bezier(.32,1.25,.5,1);
+}
+@keyframes popIn { from { opacity: 0; transform: scale(.94); } }
+.grabber { display: none; }
+
+.sheetHead { display: flex; align-items: center; gap: 12px; }
+.sheetLoc { font-weight: 700; font-size: 17px; letter-spacing: -.2px; line-height: 1.22; }
+.sheetType { font-size: 12.5px; color: var(--gray); font-weight: 500; margin-top: 2px; }
+.closeBtn, .iconBtn {
+  width: 32px; height: 32px; border: none; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+  background: rgba(120,120,128,.16); color: var(--gray); font-size: 13px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.iconBtn { font-size: 15px; color: var(--blue); background: rgba(0,113,227,.12); }
+.closeBtn:hover { background: rgba(120,120,128,.24); color: var(--ink); }
+.iconBtn:hover { background: rgba(0,113,227,.2); }
+
+.infoRow { display: flex; gap: 10px; margin-top: 16px; }
+.infoBox {
+  flex: 1; display: flex; flex-direction: column; gap: 2px;
+  background: rgba(255,255,255,.55); border: 0.5px solid rgba(255,255,255,.7);
+  border-radius: var(--r-sm); padding: 9px 13px;
+}
+.infoLbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--gray); }
+.infoVal { font-weight: 700; font-size: 14px; }
+
+.warnBand {
+  margin-top: 10px; padding: 9px 13px; border-radius: var(--r-sm);
+  background: rgba(255,59,48,.12); color: var(--red-deep);
+  font-size: 13px; font-weight: 600; border: 0.5px solid rgba(255,59,48,.2);
+}
+
+.secTitle { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gray); margin: 22px 0 9px; }
+
+.checkGroup { display: flex; flex-direction: column; gap: 8px; }
+.checkRow {
+  display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+  font-size: 14px; background: rgba(255,255,255,.6);
+  border: 0.5px solid rgba(255,255,255,.8);
+  border-radius: var(--r-sm);
+  box-shadow: 0 1px 3px rgba(30,35,50,.05);
+  transition: box-shadow .15s, background .15s;
+}
+.checkRow:hover { background: rgba(255,255,255,.75); box-shadow: 0 3px 10px rgba(30,35,50,.08); }
+.checkLbl { flex: 1; font-weight: 600; letter-spacing: -.1px; font-size: 14px; }
+
+.miniSeg { display: flex; background: rgba(120,120,128,.14); border-radius: 10px; padding: 3px; gap: 3px; flex-shrink: 0; }
+.ms {
+  border: none; background: transparent; cursor: pointer; font-family: inherit;
+  font-size: 12.5px; font-weight: 700; color: var(--gray);
+  padding: 6px 13px; border-radius: 8px; transition: all .15s;
+}
+.ms:hover { color: var(--ink); }
+.msOk { background: var(--green); color: #fff; box-shadow: 0 2px 6px rgba(52,199,89,.45); }
+.msOk:hover { color: #fff; }
+.msBad { background: var(--red); color: #fff; box-shadow: 0 2px 6px rgba(255,59,48,.45); }
+.msBad:hover { color: #fff; }
+
+.note {
+  width: 100%; margin-top: 12px; padding: 11px 14px; font-family: inherit; font-size: 14px;
+  border: 0.5px solid rgba(255,255,255,.7); border-radius: var(--r-sm);
+  background: rgba(255,255,255,.55); color: var(--ink); resize: vertical; outline: none;
+  min-height: 72px;
+}
+.note::placeholder { color: var(--gray); }
+.note:focus { background: rgba(255,255,255,.85); box-shadow: 0 0 0 3px rgba(0,113,227,.22); }
+
+.btnRow { display: flex; gap: 9px; margin-top: 14px; flex-wrap: wrap; }
+.saveBtn {
+  flex: 1; min-width: 190px; padding: 13px 18px; border: none; border-radius: 14px; cursor: pointer;
+  font-family: inherit; font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.1px;
+  transition: transform .12s, filter .12s;
+}
+.saveBtn:active { transform: scale(.98); }
+.saveOk { background: var(--green); box-shadow: 0 6px 18px rgba(52,199,89,.35); }
+.saveOk:hover { filter: brightness(.95); }
+.saveBad { background: var(--red); box-shadow: 0 6px 18px rgba(255,59,48,.35); }
+.saveBad:hover { filter: brightness(.95); }
+.delBtn {
+  padding: 13px 16px; border-radius: 14px; cursor: pointer; font-family: inherit;
+  font-size: 13.5px; font-weight: 600; color: var(--red-deep);
+  background: rgba(255,59,48,.1); border: none;
+}
+.delBtn:hover { background: rgba(255,59,48,.16); }
+
+.histEmpty { font-size: 13.5px; color: var(--gray); }
+.histList { display: flex; flex-direction: column; gap: 4px; }
+.histRow {
+  display: flex; gap: 11px; align-items: flex-start; padding: 10px 13px;
+  background: rgba(255,255,255,.5); border: 0.5px solid rgba(255,255,255,.65);
+  border-radius: var(--r-sm);
+}
+.histMonth { font-weight: 600; font-size: 14px; }
+.histOk { color: var(--green-deep); font-weight: 700; margin-left: 8px; font-size: 13px; }
+.histBad { color: var(--red-deep); font-weight: 700; margin-left: 8px; font-size: 13px; }
+.histIssues { font-size: 12.5px; color: var(--red-deep); margin-top: 2px; font-weight: 500; }
+.histNote { font-size: 13px; color: var(--gray); margin-top: 2px; font-style: italic; }
+.histDate { font-size: 11.5px; color: var(--gray); white-space: nowrap; padding-top: 3px; }
+
+.formGroup { display: flex; flex-direction: column; margin-top: 16px; }
+.formLbl {
+  display: block; font-size: 12px; font-weight: 700; color: var(--gray);
+  text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 6px;
+}
+.formGroup .formLbl:first-child { margin-top: 0; }
+.formInput {
+  display: block; width: 100%; padding: 12px 14px;
+  font-family: inherit; font-size: 15px; font-weight: 500;
+  border: 0.5px solid rgba(255,255,255,.8); border-radius: var(--r-sm);
+  background: rgba(255,255,255,.65); color: var(--ink); outline: none;
+  box-shadow: 0 1px 3px rgba(30,35,50,.05);
+  transition: background .15s, box-shadow .15s;
+}
+.formInput::placeholder { color: rgba(110,110,115,.65); font-weight: 400; }
+.formInput:focus { background: rgba(255,255,255,.95); box-shadow: 0 0 0 3px rgba(0,113,227,.22); }
+.formRow2 { display: flex; gap: 10px; }
+.formRow2 > div { flex: 1; min-width: 0; }
+
+.dangerZone { margin-top: 22px; padding-top: 14px; border-top: 0.5px solid var(--hairline); }
+.ghostDanger {
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 13px; font-weight: 600; color: var(--red-deep); opacity: .75; padding: 4px 0;
+}
+.ghostDanger:hover { opacity: 1; text-decoration: underline; }
+.confirmRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.confirmTxt { font-size: 13px; color: var(--red-deep); font-weight: 600; flex: 1; }
+.confirmBtns { display: flex; gap: 8px; }
+.confirmNo, .confirmYes {
+  border: none; border-radius: 9px; padding: 7px 13px; font-family: inherit;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.confirmNo { background: rgba(120,120,128,.15); color: var(--ink); }
+.confirmYes { background: var(--red); color: #fff; }
+
+@media (max-width: 640px) {
+  .title { font-size: 22px; }
+  .topInner { padding: 12px 14px 10px; }
+  .grid { padding: 0 12px; gap: 9px; grid-template-columns: 1fr; margin-top: 14px; }
+  .card { padding: 12px; }
+  .statRow { gap: 10px; flex-wrap: wrap; }
+  .ring { width: 48px; height: 48px; }
+  .addBtn { padding: 9px 12px; }
+  .addTxt { display: none; }
+  .controls { gap: 8px; }
+  .search { min-width: 100%; order: 2; }
+  .segment { width: 100%; }
+  .seg { flex: 1; padding: 7px 6px; font-size: 12.5px; }
+  .overlay { align-items: flex-end; padding: 0; }
+  .sheet {
+    max-width: 100%; max-height: 92vh;
+    border-radius: 24px 24px 0 0;
+    padding: 10px 16px 24px;
+    animation: slideUp .28s cubic-bezier(.32,1.15,.5,1);
+  }
+  @keyframes slideUp { from { transform: translateY(60px); opacity: 0; } }
+  .grabber { display: block; width: 38px; height: 5px; border-radius: 3px; background: rgba(120,120,128,.3); margin: 0 auto 14px; }
+  .checkRow { flex-wrap: wrap; }
+  .miniSeg { margin-left: auto; }
+  .saveBtn { min-width: 100%; }
+  .delBtn { width: 100%; }
+  .formRow2 { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<div class="blob b1"></div>
+<div class="blob b2"></div>
+<div class="blob b3"></div>
+
+<!-- TOPBAR -->
+<header class="topBar">
+  <div class="topInner">
+    <div class="titleRow">
+      <div>
+        <div class="eyebrow">FR.43.17 · Aylık Kontrol</div>
+        <h1 class="title">Yangın Tüpleri</h1>
+      </div>
+      <div class="monthPicker">
+        <button class="mBtn" onclick="changeMonth(-1)">‹</button>
+        <span class="mLabel" id="mLabel">—</span>
+        <button class="mBtn" onclick="changeMonth(1)">›</button>
+      </div>
+    </div>
+
+    <div class="statRow">
+      <div class="ring" id="ring" style="--p:0%"><span id="ringPct">0%</span></div>
+      <div class="statText">
+        <div class="statBig"><span id="statDone">0</span> <span class="statDim">/ <span id="statToplam">90</span> tüp kontrol edildi</span></div>
+        <div class="statSub">
+          <span class="dot ok"></span><span id="statOk">0</span> uygun &nbsp;
+          <span class="dot sorun"></span><span id="statSorun">0</span> sorunlu &nbsp;
+          <span class="dot bekliyor"></span><span id="statBekl">90</span> bekliyor
+        </div>
+      </div>
+      <button class="addBtn" onclick="openNewSheet()">
+        <span class="addPlus">+</span><span class="addTxt">Yeni tüp</span>
+      </button>
+    </div>
+
+    <div class="controls">
+      <div class="segment">
+        <button class="seg segOn" onclick="setFilter('hepsi',this)">Tümü</button>
+        <button class="seg" onclick="setFilter('bekliyor',this)">Bekliyor</button>
+        <button class="seg seg-ok" onclick="setFilter('ok',this)">Uygun</button>
+        <button class="seg seg-sorun" onclick="setFilter('sorun',this)">Sorunlu</button>
+      </div>
+      <input class="search" placeholder="Ara — no veya yer" id="searchInput" oninput="renderGrid()">
+    </div>
+  </div>
+</header>
+
+<!-- GRID -->
+<main class="grid" id="grid"></main>
+
+<!-- TÜP DETAIL OVERLAY -->
+<div class="overlay" id="detailOverlay" onclick="handleOverlayClick(event,'detailOverlay')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="grabber"></div>
+    <div id="sheetContent"></div>
+  </div>
+</div>
+
+<!-- YENİ TÜP OVERLAY -->
+<div class="overlay" id="newOverlay" onclick="handleOverlayClick(event,'newOverlay')">
+  <div class="sheet" onclick="event.stopPropagation()">
+    <div class="grabber"></div>
+    <div id="newContent"></div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──
+const VARSAYILAN = [
+  [1,"GÜVENLİK ÖN","6 KG KURU TOZ","MART 2025","OCAK 2029"],
+  [2,"GÜVENLİK ARKA","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [3,"ŞİRKET ÖN CEPHE","50 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [4,"ŞİRKET ÖN CEPHE","50 KG KÖPÜK","OCAK 2025","OCAK 2029"],
+  [5,"ÖN İÇ KAPI YANI","50 KG KÖPÜK","OCAK 2025","TEMMUZ 2029"],
+  [6,"ÖN İÇ KAPI YANI","50 KG KURU TOZ","OCAK 2025","TEMMUZ 2029"],
+  [7,"MAVİ YAKA ZEMİN KAT DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [8,"MEKANİK DUVAR TARAFI","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [9,"MEKANİK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [10,"MEKANİK DUVAR TARAFI DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [11,"MEKANİK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [12,"MEKANİK TARAFI ALT KAT İNİŞ KAPISI ÖNÜ","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [13,"MEKANİK TARAFI ALT KAT İNİŞ KAPISI ÖNÜ DOLAP","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [14,"MEKANİK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [15,"MEKANİK DUVAR TARAFI DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [16,"ÜST KAT KARŞI DUVAR DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [17,"ÜST KAT KARŞI DUVAR DOLAP","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [18,"ÜST KAT KARŞI DUVAR","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [19,"ÜST KAT KARŞI DUVAR DOLAP","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [20,"ÜST KAT KARŞI DUVAR","5 KG KARBONDİOKSİT","OCAK 2023","OCAK 2029"],
+  [21,"ÜST KAT YÜK ASANSÖRÜ YANI","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [22,"ELEKTRİK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [23,"ELEKTRİK DUVAR TARAFI","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [24,"ELEKTRİK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [25,"ELEKTRİK TARAFI AŞAĞI İNİŞ DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [26,"ELEKTRİK TARAFI AŞAĞI İNİŞ KAPI ÖNÜ","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [27,"ELEKTRİK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [28,"ELEKTRİK DUVAR TARAFI DUVAR DOLAP İÇİ","6 KG KURU TOZ","OCAK 2023","OCAK 2027"],
+  [29,"ELEKTRİK DUVAR TARAFI PANO",null,"OCAK 2025","OCAK 2029"],
+  [30,"BEYAZ YAKA İÇERİ GİRİŞ KAPI ÖNÜ","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [31,"BEYAZ YAKA ZEMİN DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [32,"ÜST KAT ORTA KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [33,"ÜST KAT ORTA KOLON DOLAP","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [34,"ÜST KAT ORTA KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [35,"ÜST KAT ORTA KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [36,"ÜST KAT ORTA KOLON","5 KG KÖPÜK","EYLÜL 2023","EYLÜL 2025"],
+  [37,"ÜST KAT ORTA KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [38,"ÜST KAT ORTA KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [39,"ÜST KAT ORTA KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [40,"ÜST KAT ORTA KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [41,"ÜST KAT ORTA KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [42,"ÜST KAT ORTA KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [43,"ÜST KAT ORTA KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [44,"YÜK ASANSÖRÜ TARAFI AŞAĞI İNİŞ MERDİVEN BOŞLUĞU","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [45,"BOYA KAYNAK GİRİŞ ÖNÜ","50 KG KÖPÜK","OCAK 2025","OCAK 2029"],
+  [46,"BOYA KAYNAK GİRİŞ ÖNÜ","50 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [47,"KAYNAK OFİS YANI DOLAP İÇİ","6 KG KURU TOZ","NİSAN 2024","OCAK 2028"],
+  [48,"KAYNAK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [49,"KAYNAK DUVAR TARAFI DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [50,"KAYNAK TARAFI PANO TÜPÜ",null,null,null],
+  [51,"KAYNAK TARAFI YUKARI ÇIKIŞ DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [52,"KAYNAK TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [53,"KAYNAK TARAFI KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [54,"KAYNAK TARAFI KOLON LAVABO ÖNÜ","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [55,"KAYNAK TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [56,"KAYNAK TARAFI KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [57,"KAYNAK TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [58,"DEPO İÇİ","12 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [59,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [60,"BOYA TARAFI KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [61,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [62,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [63,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [64,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [65,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [66,"BOYA TARAFI KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [67,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [68,"BOYA TARAFI KOLON","6 KG KURU TOZ","OCAK 2025","OCAK 2029"],
+  [69,"BOYA TARAFI OFİS DOLAP İÇİ","6 KG KURU TOZ","OCAK 2023","OCAK 2027"],
+  [70,"BOYA DUVAR TARAFI DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [71,"BOYA TARAFI DUVAR DOLAP YANI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [72,"DEPO ARKASI GİYİNME YERİ DOLAP","6 KG KURU TOZ","OCAK 2023","HAZİRAN 2027"],
+  [73,"ELEKTRİK DUVAR TARAFI","5 KG KARBONDİOKSİT","OCAK 2025","OCAK 2029"],
+  [74,"BEYAZ YAKA 1. KAT DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [75,"BEYAZ YAKA 2. KAT DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [76,"ELEKTRİK TARAFI KOLON ÖNÜ","30 KG KARBONDİOKSİT","OCAK 2025","TEMMUZ 2029"],
+  [77,"MAVİ YAKA 1. KAT DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [78,"MAVİ YAKA 2. KAT DOLAP İÇİ","6 KG KURU TOZ","HAZİRAN 2023","HAZİRAN 2027"],
+  [79,"BOYA TARAFI KOLON","5 KG KARBONDİOKSİT",null,null],
+  [80,"BEYAZ YAKA 3. KAT DOLAP İÇİ","6 KG KURU TOZ",null,null],
+  [81,"BEYAZ YAKA 1. KAT SERVER ODASI",null,null,null],
+  [82,"BEYAZ YAKA -1 KAT DOLAP İÇİ","6 KG KURU TOZ",null,null],
+  [83,"MAVİ YAKA 3. KAT DOLAP İÇİ","6 KG KURU TOZ",null,null],
+  [84,"MAVİ YAKA 1. KAT SERVER ODASI",null,null,null],
+  [85,"MAVİ YAKA -1 KAT DOLAP İÇİ","6 KG KURU TOZ",null,null],
+  [86,"ATIK SAHASI","50 KG KÖPÜK",null,null],
+  [87,"YEDEK","6 KG KURU TOZ",null,null],
+  [88,"YEDEK","5 KG KARBONDİOKSİT",null,null],
+  [89,"HİDRANT",null,null,null],
+  [90,"HİDRANT",null,null,null],
+].map(([no,yer,cins,dolum,skt])=>({no,yer,cins,dolum,skt}));
+
+const KALEMLER = [
+  {key:"basinc", label:"Basınç ve doluluk uygun"},
+  {key:"pim",    label:"Pim sağlam"},
+  {key:"manometre", label:"Manometre çalışıyor"},
+  {key:"hortum", label:"Hortum / lans sağlam"},
+];
+
+const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+const AY_IDX = {OCAK:0,ŞUBAT:1,SUBAT:1,MART:2,"NİSAN":3,NISAN:3,MAYIS:4,"HAZİRAN":5,HAZIRAN:5,TEMMUZ:6,"AĞUSTOS":7,AGUSTOS:7,"EYLÜL":8,EYLUL:8,"EKİM":9,EKIM:9,KASIM:10,ARALIK:11};
+
+const KEY_TUPLER = 'yangintup:liste';
+const KEY_CHECKS = 'yangintup:checks';
+
+function loadTupler() { try { return JSON.parse(localStorage.getItem(KEY_TUPLER))||VARSAYILAN; } catch { return VARSAYILAN; } }
+function saveTupler(l) { localStorage.setItem(KEY_TUPLER,JSON.stringify(l)); }
+function loadChecks() { try { return JSON.parse(localStorage.getItem(KEY_CHECKS))||{}; } catch { return {}; } }
+function saveChecks(c) { localStorage.setItem(KEY_CHECKS,JSON.stringify(c)); }
+
+function sktDurum(skt) {
+  if(!skt) return null;
+  const p=skt.trim().toUpperCase().split(/\s+/);
+  const mi=AY_IDX[p[0]]; const y=parseInt(p[1]);
+  if(mi===undefined||isNaN(y)) return null;
+  const now=new Date();
+  const diff=(y-now.getFullYear())*12+(mi-now.getMonth());
+  if(diff<0) return 'gecmis';
+  if(diff<=3) return 'yaklasiyor';
+  return null;
+}
+
+function monthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function monthLabel(k) { const[y,m]=k.split('-'); return `${AYLAR[+m-1]} ${y}`; }
+function shiftMonth(k,d) { const[y,m]=k.split('-').map(Number); return monthKey(new Date(y,m-1+d,1)); }
+
+// ── STATE ──
+let tupler = loadTupler();
+let checks = loadChecks();
+let aktifAy = monthKey(new Date());
+let filtre = 'hepsi';
+let seciliNo = null;
+let sheetItems = {};
+let sheetDigerSorun = false;
+let sheetNot = '';
+let duzenleMode = false;
+let silOnay = false;
+let taslak = {};
+
+function ayVerisi() { return checks[aktifAy]||{}; }
+function durumOf(no) { return ayVerisi()[no]?.durum||'bekliyor'; }
+
+function stats() {
+  let ok=0,sorun=0;
+  tupler.forEach(t=>{const d=durumOf(t.no);if(d==='ok')ok++;if(d==='sorun')sorun++;});
+  return {ok,sorun,bekliyor:tupler.length-ok-sorun,toplam:tupler.length};
+}
+
+// ── RENDER HEADER ──
+function renderHeader() {
+  document.getElementById('mLabel').textContent = monthLabel(aktifAy);
+  const s=stats(), done=s.ok+s.sorun, pct=s.toplam?Math.round(done/s.toplam*100):0;
+  document.getElementById('statOk').textContent=s.ok;
+  document.getElementById('statSorun').textContent=s.sorun;
+  document.getElementById('statBekl').textContent=s.bekliyor;
+  document.getElementById('statDone').textContent=done;
+  document.getElementById('statToplam').textContent=s.toplam;
+  document.getElementById('ringPct').textContent=pct+'%';
+  document.getElementById('ring').style.setProperty('--p', pct+'%');
+}
+
+// ── RENDER GRID ──
+function renderGrid() {
+  const q=(document.getElementById('searchInput').value||'').toLowerCase();
+  const av=ayVerisi();
+  const filtered=tupler.filter(t=>{
+    const d=durumOf(t.no);
+    if(filtre==='ok'&&d!=='ok') return false;
+    if(filtre==='sorun'&&d!=='sorun') return false;
+    if(filtre==='bekliyor'&&d!=='bekliyor') return false;
+    if(q&&!`${t.no} ${t.yer||''} ${t.cins||''}`.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b)=>a.no-b.no);
+
+  const el=document.getElementById('grid');
+  if(!filtered.length){el.innerHTML='<div class="empty">Bu filtreye uyan tüp yok.</div>';return;}
+
+  el.innerHTML=filtered.map(t=>{
+    const d=durumOf(t.no);
+    const skt=sktDurum(t.skt);
+    const mark=d==='ok'?'✓':d==='sorun'?'!':'›';
+    const pills=(skt==='gecmis'?'<span class="pill pillRed">SKT geçmiş</span>':skt==='yaklasiyor'?'<span class="pill pillAmber">SKT yakın</span>':'');
+    return `<button class="card ${d}" onclick="openDetail(${t.no})">
+      <div class="badge ${d}">${t.no}</div>
+      <div class="cardBody">
+        <div class="cardLoc">${t.yer||'—'}</div>
+        <div class="cardMeta"><span>${t.cins||'Cinsi belirtilmemiş'}</span>${pills}</div>
+      </div>
+      <div class="mark ${d}">${mark}</div>
+    </button>`;
+  }).join('');
+}
+
+function renderAll() { renderHeader(); renderGrid(); }
+
+// ── DETAIL SHEET ──
+function openDetail(no) {
+  seciliNo=no; duzenleMode=false; silOnay=false;
+  const t=tupler.find(x=>x.no===no);
+  const mevcut=ayVerisi()[no]||null;
+  sheetItems={};
+  KALEMLER.forEach(k=>{sheetItems[k.key]=mevcut?.items?.[k.key]??true;});
+  sheetDigerSorun=mevcut?.digerSorun??false;
+  sheetNot=mevcut?.not??'';
+  taslak={yer:t.yer||'',cins:t.cins||'',dolum:t.dolum||'',skt:t.skt||''};
+  renderDetailSheet();
+  document.getElementById('detailOverlay').classList.add('show');
+  document.body.style.overflow='hidden';
+}
+
+function renderDetailSheet() {
+  const t=tupler.find(x=>x.no===seciliNo);
+  const mevcut=ayVerisi()[seciliNo]||null;
+  const sktD=sktDurum(t.skt);
+  const durumCls=mevcut?mevcut.durum:'bekliyor';
+  const sorunVar=sheetDigerSorun||KALEMLER.some(k=>sheetItems[k.key]===false);
+
+  let html='';
+
+  if(!duzenleMode){
+    html+=`<div class="sheetHead">
+      <div class="badge big ${durumCls}">${t.no}</div>
+      <div style="flex:1;min-width:0">
+        <div class="sheetLoc">${t.yer||'—'}</div>
+        <div class="sheetType">${t.cins||'Cinsi belirtilmemiş'}</div>
+      </div>
+      <button class="iconBtn" onclick="startEdit()" title="Düzenle">✎</button>
+      <button class="closeBtn" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="infoRow">
+      <div class="infoBox"><span class="infoLbl">Dolum</span><span class="infoVal">${t.dolum||'—'}</span></div>
+      <div class="infoBox"><span class="infoLbl">Son kullanma</span><span class="infoVal" style="${sktD==='gecmis'?'color:var(--red)':sktD==='yaklasiyor'?'color:var(--amber)':''}">${t.skt||'—'}</span></div>
+    </div>
+    ${sktD==='gecmis'?'<div class="warnBand">Son kullanma tarihi geçmiş — dolum / değişim planlanmalı.</div>':''}
+    <div class="secTitle">${monthLabel(aktifAy)} kontrolü</div>
+    <div class="checkGroup">
+      ${KALEMLER.map(k=>`
+        <div class="checkRow">
+          <span class="checkLbl">${k.label}</span>
+          <div class="miniSeg">
+            <button class="ms ${sheetItems[k.key]===true?'msOk':''}" onclick="setItem('${k.key}',true)">Uygun</button>
+            <button class="ms ${sheetItems[k.key]===false?'msBad':''}" onclick="setItem('${k.key}',false)">Sorunlu</button>
+          </div>
+        </div>`).join('')}
+      <div class="checkRow">
+        <span class="checkLbl">Başka bir sorun var</span>
+        <div class="miniSeg">
+          <button class="ms ${!sheetDigerSorun?'msOk':''}" onclick="setDiger(false)">Hayır</button>
+          <button class="ms ${sheetDigerSorun?'msBad':''}" onclick="setDiger(true)">Evet</button>
+        </div>
+      </div>
+    </div>
+    <textarea class="note" rows="2" placeholder="Not (isteğe bağlı) — ör. manometre iğnesi kırmızıda…" id="sheetNot" oninput="sheetNot=this.value">${sheetNot}</textarea>
+    <div class="btnRow">
+      <button class="saveBtn ${sorunVar?'saveBad':'saveOk'}" onclick="saveDetail()">
+        ${sorunVar?'Sorunlu olarak kaydet':'Kontrol edildi olarak kaydet'}
+      </button>
+      ${mevcut?'<button class="delBtn" onclick="silAyKaydi()">Ay kaydını sil</button>':''}
+    </div>`;
+
+    // Geçmiş
+    const gecmisKayitlar=Object.keys(checks).filter(m=>checks[m]?.[seciliNo]).sort().reverse();
+    html+=`<div class="secTitle">Geçmiş kontroller</div>`;
+    if(!gecmisKayitlar.length){
+      html+='<div class="histEmpty">Bu tüp için henüz kayıtlı kontrol yok.</div>';
+    } else {
+      html+=`<div class="histList">${gecmisKayitlar.map(m=>{
+        const k=checks[m][seciliNo];
+        const bozuk=KALEMLER.filter(kk=>k.items?.[kk.key]===false).map(kk=>kk.label);
+        if(k.digerSorun) bozuk.push('Diğer sorun');
+        return `<div class="histRow">
+          <span class="dot ${k.durum}" style="margin-top:6px"></span>
+          <div style="flex:1;min-width:0">
+            <div class="histMonth">${monthLabel(m)}<span class="${k.durum==='ok'?'histOk':'histBad'}">${k.durum==='ok'?'Sorun yok':'Sorunlu'}</span></div>
+            ${bozuk.length?`<div class="histIssues">${bozuk.join(' · ')}</div>`:''}
+            ${k.not?`<div class="histNote">"${k.not}"</div>`:''}
+          </div>
+          <div class="histDate">${k.tarih?new Date(k.tarih).toLocaleDateString('tr-TR'):''}</div>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
+    // Danger zone
+    html+=`<div class="dangerZone">`;
+    if(!silOnay){
+      html+=`<button class="ghostDanger" onclick="askSil()">Bu tüpü kalıcı olarak sil</button>`;
+    } else {
+      html+=`<div class="confirmRow">
+        <span class="confirmTxt">Emin misin? Tüm geçmiş kayıtları da silinecek.</span>
+        <div class="confirmBtns">
+          <button class="confirmNo" onclick="cancelSil()">Vazgeç</button>
+          <button class="confirmYes" onclick="doSil()">Evet, sil</button>
+        </div>
+      </div>`;
+    }
+    html+=`</div>`;
+
+  } else {
+    // Düzenleme modu
+    html+=`<div class="sheetHead">
+      <div class="badge big bekliyor">${t.no}</div>
+      <div style="flex:1;min-width:0"><div class="sheetLoc">Tüpü düzenle</div><div class="sheetType">No: ${t.no}</div></div>
+      <button class="closeBtn" onclick="cancelEdit()">✕</button>
+    </div>
+    <div class="formGroup">
+      <label class="formLbl">Bulunduğu yer</label>
+      <input class="formInput" value="${taslak.yer}" oninput="taslak.yer=this.value" placeholder="Örn. ÜST KAT ORTA KOLON">
+      <label class="formLbl">Cinsi / kapasitesi</label>
+      <input class="formInput" value="${taslak.cins}" oninput="taslak.cins=this.value" placeholder="Örn. 6 KG KURU TOZ">
+      <div class="formRow2">
+        <div>
+          <label class="formLbl">Dolum tarihi</label>
+          <input class="formInput" value="${taslak.dolum}" oninput="taslak.dolum=this.value" placeholder="Örn. OCAK 2025">
+        </div>
+        <div>
+          <label class="formLbl">Son kullanma</label>
+          <input class="formInput" value="${taslak.skt}" oninput="taslak.skt=this.value" placeholder="Örn. OCAK 2029">
+        </div>
+      </div>
+    </div>
+    <div class="btnRow">
+      <button class="saveBtn saveOk" onclick="saveEdit()">Değişiklikleri kaydet</button>
+      <button class="delBtn" onclick="cancelEdit()">Vazgeç</button>
+    </div>`;
+  }
+
+  document.getElementById('sheetContent').innerHTML=html;
+}
+
+function setItem(key,val) { sheetItems[key]=val; renderDetailSheet(); }
+function setDiger(val) { sheetDigerSorun=val; renderDetailSheet(); }
+function startEdit() { duzenleMode=true; renderDetailSheet(); }
+function cancelEdit() { duzenleMode=false; renderDetailSheet(); }
+function askSil() { silOnay=true; renderDetailSheet(); }
+function cancelSil() { silOnay=false; renderDetailSheet(); }
+
+function saveEdit() {
+  tupler=tupler.map(t=>t.no===seciliNo?{...t,yer:taslak.yer.trim(),cins:taslak.cins.trim()||null,dolum:taslak.dolum.trim()||null,skt:taslak.skt.trim()||null}:t);
+  saveTupler(tupler); duzenleMode=false; renderDetailSheet(); renderAll();
+}
+
+function saveDetail() {
+  sheetNot=document.getElementById('sheetNot')?.value||sheetNot;
+  const sorunVar=sheetDigerSorun||KALEMLER.some(k=>sheetItems[k.key]===false);
+  if(!checks[aktifAy]) checks[aktifAy]={};
+  checks[aktifAy][seciliNo]={durum:sorunVar?'sorun':'ok',items:{...sheetItems},digerSorun:sheetDigerSorun,not:sheetNot.trim(),tarih:new Date().toISOString()};
+  saveChecks(checks); closeDetail(); renderAll();
+}
+
+function silAyKaydi() {
+  if(checks[aktifAy]) { delete checks[aktifAy][seciliNo]; saveChecks(checks); }
+  closeDetail(); renderAll();
+}
+
+function doSil() {
+  tupler=tupler.filter(t=>t.no!==seciliNo); saveTupler(tupler);
+  Object.keys(checks).forEach(m=>{if(checks[m][seciliNo]){delete checks[m][seciliNo];}});
+  saveChecks(checks); closeDetail(); renderAll();
+}
+
+function closeDetail() {
+  document.getElementById('detailOverlay').classList.remove('show');
+  document.body.style.overflow=''; seciliNo=null;
+}
+
+// ── YENİ TÜP ──
+function openNewSheet() {
+  taslak={yer:'',cins:'',dolum:'',skt:''};
+  document.getElementById('newContent').innerHTML=`
+    <div class="sheetHead">
+      <div class="badge big bekliyor">+</div>
+      <div style="flex:1;min-width:0"><div class="sheetLoc">Yeni tüp ekle</div><div class="sheetType">Listeye yeni bir yangın tüpü kaydet</div></div>
+      <button class="closeBtn" onclick="closeNew()">✕</button>
+    </div>
+    <div class="formGroup">
+      <label class="formLbl">Bulunduğu yer *</label>
+      <input class="formInput" id="nYer" placeholder="Örn. YENİ DEPO GİRİŞİ" autofocus>
+      <label class="formLbl">Cinsi / kapasitesi</label>
+      <input class="formInput" id="nCins" placeholder="Örn. 6 KG KURU TOZ">
+      <div class="formRow2">
+        <div><label class="formLbl">Dolum tarihi</label><input class="formInput" id="nDolum" placeholder="Örn. TEMMUZ 2026"></div>
+        <div><label class="formLbl">Son kullanma</label><input class="formInput" id="nSkt" placeholder="Örn. TEMMUZ 2030"></div>
+      </div>
+    </div>
+    <div class="btnRow">
+      <button class="saveBtn saveOk" onclick="saveNew()">Tüpü listeye ekle</button>
+    </div>`;
+  document.getElementById('newOverlay').classList.add('show');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>document.getElementById('nYer')?.focus(),100);
+}
+
+function saveNew() {
+  const yer=document.getElementById('nYer').value.trim();
+  if(!yer){alert('Konum zorunludur.');return;}
+  const maxNo=tupler.reduce((m,t)=>Math.max(m,t.no),0);
+  tupler.push({no:maxNo+1,yer,cins:document.getElementById('nCins').value.trim()||null,dolum:document.getElementById('nDolum').value.trim()||null,skt:document.getElementById('nSkt').value.trim()||null});
+  saveTupler(tupler); closeNew(); renderAll();
+}
+
+function closeNew() { document.getElementById('newOverlay').classList.remove('show'); document.body.style.overflow=''; }
+
+// ── CONTROLS ──
+function changeMonth(d) { aktifAy=shiftMonth(aktifAy,d); renderAll(); }
+function setFilter(f,btn) {
+  filtre=f;
+  document.querySelectorAll('.seg').forEach(s=>s.classList.remove('segOn'));
+  btn.classList.add('segOn');
+  renderGrid();
+}
+function handleOverlayClick(e,id) { if(e.target===document.getElementById(id)){id==='detailOverlay'?closeDetail():closeNew();} }
+
+window.changeMonth=changeMonth; window.setFilter=setFilter; window.handleOverlayClick=handleOverlayClick;
+window.openDetail=openDetail; window.closeDetail=closeDetail;
+window.openNewSheet=openNewSheet; window.closeNew=closeNew; window.saveNew=saveNew;
+window.setItem=setItem; window.setDiger=setDiger;
+window.startEdit=startEdit; window.cancelEdit=cancelEdit; window.saveEdit=saveEdit;
+window.saveDetail=saveDetail; window.silAyKaydi=silAyKaydi;
+window.askSil=askSil; window.cancelSil=cancelSil; window.doSil=doSil;
+
+renderAll();
+</script>
+</body>
+</html>
