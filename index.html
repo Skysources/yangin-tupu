@@ -311,6 +311,9 @@ body {
 .confirmNo { background: rgba(120,120,128,.15); color: var(--ink); }
 .confirmYes { background: var(--red); color: #fff; }
 
+.toast-msg{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(28,28,30,.88);backdrop-filter:blur(10px);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:600;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast-msg.toast-err{background:rgba(215,0,21,.88)}
+.toast-msg.show{opacity:1}
 @media (max-width: 640px) {
   .title { font-size: 22px; }
   .topInner { padding: 12px 14px 10px; }
@@ -342,6 +345,13 @@ body {
 </style>
 </head>
 <body>
+
+<!-- LOADING -->
+<div id="loadingScreen" style="position:fixed;inset:0;background:linear-gradient(160deg,#EEF1F6,#E8ECF3,#EDEAF2);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:-apple-system,sans-serif">
+  <div style="width:44px;height:44px;border:3px solid rgba(0,113,227,.15);border-top-color:#0071E3;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <p style="color:#6E6E73;font-size:14px">Veriler yükleniyor…</p>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <div class="blob b1"></div>
 <div class="blob b2"></div>
@@ -408,7 +418,24 @@ body {
   </div>
 </div>
 
-<script>
+<script type="module">
+// ── FIREBASE ──
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, setDoc, collection, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyARqFrQUONDufC6cdybGbTeNsRsyGhuAUg",
+  authDomain: "yangin-tupu.firebaseapp.com",
+  projectId: "yangin-tupu",
+  storageBucket: "yangin-tupu.firebasestorage.app",
+  messagingSenderId: "743165469599",
+  appId: "1:743165469599:web:0b185ef852b31e8716d3aa"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+
 // ── DATA ──
 const VARSAYILAN = [
   [1,"GÜVENLİK ÖN","6 KG KURU TOZ","MART 2025","OCAK 2029"],
@@ -513,13 +540,30 @@ const KALEMLER = [
 const AYLAR = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 const AY_IDX = {OCAK:0,ŞUBAT:1,SUBAT:1,MART:2,"NİSAN":3,NISAN:3,MAYIS:4,"HAZİRAN":5,HAZIRAN:5,TEMMUZ:6,"AĞUSTOS":7,AGUSTOS:7,"EYLÜL":8,EYLUL:8,"EKİM":9,EKIM:9,KASIM:10,ARALIK:11};
 
-const KEY_TUPLER = 'yangintup:liste';
-const KEY_CHECKS = 'yangintup:checks';
-
-function loadTupler() { try { return JSON.parse(localStorage.getItem(KEY_TUPLER))||VARSAYILAN; } catch { return VARSAYILAN; } }
-function saveTupler(l) { localStorage.setItem(KEY_TUPLER,JSON.stringify(l)); }
-function loadChecks() { try { return JSON.parse(localStorage.getItem(KEY_CHECKS))||{}; } catch { return {}; } }
-function saveChecks(c) { localStorage.setItem(KEY_CHECKS,JSON.stringify(c)); }
+// ── FIRESTORE HELPERS ──
+async function fbLoadTupler() {
+  try {
+    const snap = await getDoc(doc(db,'config','tupler'));
+    if(snap.exists() && snap.data().liste) return snap.data().liste;
+  } catch(e) { console.warn('Tüpler yüklenemedi:',e); }
+  return VARSAYILAN;
+}
+async function await fbSaveTupler(l) {
+  try { await setDoc(doc(db,'config','tupler'),{liste:l}); }
+  catch(e) { console.error('Tüpler kaydedilemedi:',e); showToast('Kayıt hatası!','err'); }
+}
+async function fbLoadChecks() {
+  try {
+    const snap = await getDocs(collection(db,'kontroller'));
+    const result = {};
+    snap.forEach(d=>{ result[d.id]=d.data().kayitlar||{}; });
+    return result;
+  } catch(e) { console.warn('Kontroller yüklenemedi:',e); return {}; }
+}
+async function await fbSaveMonth(monthKey, monthData) {
+  try { await setDoc(doc(db,'kontroller',monthKey),{kayitlar:monthData}); }
+  catch(e) { console.error('Ay kaydedilemedi:',e); showToast('Kayıt hatası!','err'); }
+}
 
 function sktDurum(skt) {
   if(!skt) return null;
@@ -538,8 +582,8 @@ function monthLabel(k) { const[y,m]=k.split('-'); return `${AYLAR[+m-1]} ${y}`; 
 function shiftMonth(k,d) { const[y,m]=k.split('-').map(Number); return monthKey(new Date(y,m-1+d,1)); }
 
 // ── STATE ──
-let tupler = loadTupler();
-let checks = loadChecks();
+let tupler = [];
+let checks = {};
 let aktifAy = monthKey(new Date());
 let filtre = 'hepsi';
 let seciliNo = null;
@@ -749,7 +793,7 @@ function cancelSil() { silOnay=false; renderDetailSheet(); }
 
 function saveEdit() {
   tupler=tupler.map(t=>t.no===seciliNo?{...t,yer:taslak.yer.trim(),cins:taslak.cins.trim()||null,dolum:taslak.dolum.trim()||null,skt:taslak.skt.trim()||null}:t);
-  saveTupler(tupler); duzenleMode=false; renderDetailSheet(); renderAll();
+  await fbSaveTupler(tupler); duzenleMode=false; renderDetailSheet(); renderAll();
 }
 
 function saveDetail() {
@@ -757,18 +801,18 @@ function saveDetail() {
   const sorunVar=sheetDigerSorun||KALEMLER.some(k=>sheetItems[k.key]===false);
   if(!checks[aktifAy]) checks[aktifAy]={};
   checks[aktifAy][seciliNo]={durum:sorunVar?'sorun':'ok',items:{...sheetItems},digerSorun:sheetDigerSorun,not:sheetNot.trim(),tarih:new Date().toISOString()};
-  saveChecks(checks); closeDetail(); renderAll();
+  await fbSaveMonth(aktifAy, checks[aktifAy]||{}); closeDetail(); renderAll();
 }
 
 function silAyKaydi() {
-  if(checks[aktifAy]) { delete checks[aktifAy][seciliNo]; saveChecks(checks); }
+  if(checks[aktifAy]) { delete checks[aktifAy][seciliNo]; await fbSaveMonth(aktifAy, checks[aktifAy]||{}); }
   closeDetail(); renderAll();
 }
 
 function doSil() {
-  tupler=tupler.filter(t=>t.no!==seciliNo); saveTupler(tupler);
+  tupler=tupler.filter(t=>t.no!==seciliNo); await fbSaveTupler(tupler);
   Object.keys(checks).forEach(m=>{if(checks[m][seciliNo]){delete checks[m][seciliNo];}});
-  saveChecks(checks); closeDetail(); renderAll();
+  await fbSaveMonth(aktifAy, checks[aktifAy]||{}); closeDetail(); renderAll();
 }
 
 function closeDetail() {
@@ -808,7 +852,7 @@ function saveNew() {
   if(!yer){alert('Konum zorunludur.');return;}
   const maxNo=tupler.reduce((m,t)=>Math.max(m,t.no),0);
   tupler.push({no:maxNo+1,yer,cins:document.getElementById('nCins').value.trim()||null,dolum:document.getElementById('nDolum').value.trim()||null,skt:document.getElementById('nSkt').value.trim()||null});
-  saveTupler(tupler); closeNew(); renderAll();
+  await fbSaveTupler(tupler); closeNew(); renderAll();
 }
 
 function closeNew() { document.getElementById('newOverlay').classList.remove('show'); document.body.style.overflow=''; }
@@ -831,7 +875,26 @@ window.startEdit=startEdit; window.cancelEdit=cancelEdit; window.saveEdit=saveEd
 window.saveDetail=saveDetail; window.silAyKaydi=silAyKaydi;
 window.askSil=askSil; window.cancelSil=cancelSil; window.doSil=doSil;
 
-renderAll();
+// ── TOAST ──
+function showToast(msg, type='ok') {
+  const el=document.getElementById('toastMsg');
+  el.textContent=msg;
+  el.className='toast-msg'+(type==='err'?' toast-err':'')+' show';
+  setTimeout(()=>el.classList.remove('show'),2500);
+}
+
+// ── ASYNC INIT ──
+(async () => {
+  try {
+    [tupler, checks] = await Promise.all([fbLoadTupler(), fbLoadChecks()]);
+  } catch(e) {
+    console.error('Yükleme hatası:',e);
+    tupler = VARSAYILAN; checks = {};
+  }
+  document.getElementById('loadingScreen').style.display='none';
+  renderAll();
+})();
 </script>
+<div class="toast-msg" id="toastMsg"></div>
 </body>
 </html>
