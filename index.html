@@ -554,14 +554,28 @@ async function fbSaveTupler(l) {
 }
 async function fbLoadChecks() {
   try {
+    // Tüm ayları çek ama normalize et: key'leri string'e çevir
     const snap = await getDocs(collection(db,'kontroller'));
     const result = {};
-    snap.forEach(d=>{ result[d.id]=d.data().kayitlar||{}; });
+    snap.forEach(d=>{
+      const raw = d.data().kayitlar||{};
+      // Hem string hem number key'leri normalize et -> string key
+      const normalized = {};
+      for(const [k,v] of Object.entries(raw)) {
+        normalized[String(k)] = v;
+      }
+      result[d.id] = normalized;
+    });
     return result;
   } catch(e) { console.warn('Kontroller yüklenemedi:',e); return {}; }
 }
 async function fbSaveMonth(monthKey, monthData) {
-  try { await setDoc(doc(db,'kontroller',monthKey),{kayitlar:monthData}); }
+  try {
+    // Kayıt öncesi key'leri string'e normalize et
+    const normalized = {};
+    for(const [k,v] of Object.entries(monthData||{})) { normalized[String(k)]=v; }
+    await setDoc(doc(db,'kontroller',monthKey),{kayitlar:normalized});
+  }
   catch(e) { console.error('Ay kaydedilemedi:',e); showToast('Kayıt hatası!','err'); }
 }
 
@@ -602,7 +616,7 @@ function tupAktifMi(t) {
   return t.eklemeTarihi <= aktifAy;
 }
 
-function durumOf(no) { return ayVerisi()[no]?.durum||'bekliyor'; }
+function durumOf(no) { return ayVerisi()[String(no)]?.durum||'bekliyor'; }
 
 function stats() {
   const aktif=tupler.filter(tupAktifMi);
@@ -727,7 +741,7 @@ function renderDetailSheet() {
     // Geçmiş
     const t_ekleme=(tupler.find(x=>x.no===seciliNo)||{}).eklemeTarihi||null;
   const gecmisKayitlar=Object.keys(checks).filter(m=>{
-    if(!checks[m]?.[seciliNo]) return false;
+    if(!checks[m]?.[String(seciliNo)]) return false;
     if(t_ekleme && m < t_ekleme) return false; // ekleme tarihinden önceki ayları gizle
     return true;
   }).sort().reverse();
@@ -736,7 +750,7 @@ function renderDetailSheet() {
       html+='<div class="histEmpty">Bu tüp için henüz kayıtlı kontrol yok.</div>';
     } else {
       html+=`<div class="histList">${gecmisKayitlar.map(m=>{
-        const k=checks[m][seciliNo];
+        const k=checks[m][String(seciliNo)];
         const bozuk=KALEMLER.filter(kk=>k.items?.[kk.key]===false).map(kk=>kk.label);
         if(k.digerSorun) bozuk.push('Diğer sorun');
         return `<div class="histRow">
@@ -816,14 +830,14 @@ async function saveDetail() {
   sheetNot=document.getElementById('sheetNot')?.value||sheetNot;
   const sorunVar=sheetDigerSorun||KALEMLER.some(k=>sheetItems[k.key]===false);
   if(!checks[aktifAy]) checks[aktifAy]={};
-  checks[aktifAy][seciliNo]={durum:sorunVar?'sorun':'ok',items:{...sheetItems},digerSorun:sheetDigerSorun,not:sheetNot.trim(),tarih:new Date().toISOString()};
+  checks[aktifAy][String(seciliNo)]={durum:sorunVar?'sorun':'ok',items:{...sheetItems},digerSorun:sheetDigerSorun,not:sheetNot.trim(),tarih:new Date().toISOString()};
   await fbSaveMonth(aktifAy, checks[aktifAy]||{});
   showToast('✓ Kaydedildi');
   closeDetail(); renderAll();
 }
 
 async function silAyKaydi() {
-  if(checks[aktifAy]) { delete checks[aktifAy][seciliNo]; await fbSaveMonth(aktifAy, checks[aktifAy]||{}); }
+  if(checks[aktifAy]) { delete checks[aktifAy][String(seciliNo)]; await fbSaveMonth(aktifAy, checks[aktifAy]||{}); }
   closeDetail(); renderAll();
 }
 
@@ -930,8 +944,11 @@ async function seedIfEmpty() {
 // ── ASYNC INIT ──
 (async () => {
   try {
-    await seedIfEmpty();
-    [tupler, checks] = await Promise.all([fbLoadTupler(), fbLoadChecks()]);
+    // Önce verileri çek, sonra seed kontrol et (paralel = daha hızlı)
+    [[tupler, checks]] = await Promise.all([
+      Promise.all([fbLoadTupler(), fbLoadChecks()]),
+      seedIfEmpty()
+    ]);
   } catch(e) {
     console.error('Yükleme hatası:',e);
     tupler = VARSAYILAN; checks = {};
