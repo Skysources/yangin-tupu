@@ -927,16 +927,27 @@ const SEED_CHECKS = {"2026-01": {"1": {"durum": "ok", "items": {"basinc": true, 
 
 async function seedIfEmpty() {
   try {
-    // Sadece Firestore'da kontroller koleksiyonu boşsa seed et
     const snap = await getDocs(collection(db,'kontroller'));
-    if(snap.empty) {
-      console.log('Seed data yükleniyor...');
-      const writes = [];
-      for(const [monthKey, kayitlar] of Object.entries(SEED_CHECKS)) {
-        writes.push(setDoc(doc(db,'kontroller',monthKey), {kayitlar}));
+    // Mevcut ay key'lerini topla
+    const mevcutAylar = new Set();
+    snap.forEach(d => mevcutAylar.add(d.id));
+
+    // Seed'deki aylardan eksik olanları veya boş olanları yaz
+    const writes = [];
+    for(const [mk, kayitlar] of Object.entries(SEED_CHECKS)) {
+      if(!mevcutAylar.has(mk)) {
+        // Normalize: tüm key'leri string yap
+        const normalized = {};
+        for(const [k,v] of Object.entries(kayitlar)) normalized[String(k)]=v;
+        writes.push(setDoc(doc(db,'kontroller',mk), {kayitlar:normalized}));
+        console.log('Seed yazılıyor:', mk);
       }
+    }
+    if(writes.length > 0) {
       await Promise.all(writes);
-      console.log('Seed tamamlandı: 6 ay × 90 tüp');
+      console.log('Seed tamamlandı:', writes.length, 'ay yazıldı');
+    } else {
+      console.log('Seed: tüm aylar zaten mevcut');
     }
   } catch(e) { console.warn('Seed hatası:', e); }
 }
@@ -944,11 +955,9 @@ async function seedIfEmpty() {
 // ── ASYNC INIT ──
 (async () => {
   try {
-    // Önce verileri çek, sonra seed kontrol et (paralel = daha hızlı)
-    [[tupler, checks]] = await Promise.all([
-      Promise.all([fbLoadTupler(), fbLoadChecks()]),
-      seedIfEmpty()
-    ]);
+    // Tüpler ve seed paralel, ama checks seed bittikten sonra
+    [tupler] = await Promise.all([fbLoadTupler(), seedIfEmpty()]);
+    checks = await fbLoadChecks();
   } catch(e) {
     console.error('Yükleme hatası:',e);
     tupler = VARSAYILAN; checks = {};
