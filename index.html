@@ -791,28 +791,36 @@ function cancelEdit() { duzenleMode=false; renderDetailSheet(); }
 function askSil() { silOnay=true; renderDetailSheet(); }
 function cancelSil() { silOnay=false; renderDetailSheet(); }
 
-function saveEdit() {
+async function saveEdit() {
   tupler=tupler.map(t=>t.no===seciliNo?{...t,yer:taslak.yer.trim(),cins:taslak.cins.trim()||null,dolum:taslak.dolum.trim()||null,skt:taslak.skt.trim()||null}:t);
-  await fbSaveTupler(tupler); duzenleMode=false; renderDetailSheet(); renderAll();
+  await fbSaveTupler(tupler);
+  showToast('✓ Tüp güncellendi');
+  duzenleMode=false; renderDetailSheet(); renderAll();
 }
 
-function saveDetail() {
+async function saveDetail() {
   sheetNot=document.getElementById('sheetNot')?.value||sheetNot;
   const sorunVar=sheetDigerSorun||KALEMLER.some(k=>sheetItems[k.key]===false);
   if(!checks[aktifAy]) checks[aktifAy]={};
   checks[aktifAy][seciliNo]={durum:sorunVar?'sorun':'ok',items:{...sheetItems},digerSorun:sheetDigerSorun,not:sheetNot.trim(),tarih:new Date().toISOString()};
-  await fbSaveMonth(aktifAy, checks[aktifAy]||{}); closeDetail(); renderAll();
+  await fbSaveMonth(aktifAy, checks[aktifAy]||{});
+  showToast('✓ Kaydedildi');
+  closeDetail(); renderAll();
 }
 
-function silAyKaydi() {
+async function silAyKaydi() {
   if(checks[aktifAy]) { delete checks[aktifAy][seciliNo]; await fbSaveMonth(aktifAy, checks[aktifAy]||{}); }
   closeDetail(); renderAll();
 }
 
-function doSil() {
-  tupler=tupler.filter(t=>t.no!==seciliNo); await fbSaveTupler(tupler);
-  Object.keys(checks).forEach(m=>{if(checks[m][seciliNo]){delete checks[m][seciliNo];}});
-  await fbSaveMonth(aktifAy, checks[aktifAy]||{}); closeDetail(); renderAll();
+async function doSil() {
+  tupler=tupler.filter(t=>t.no!==seciliNo);
+  await fbSaveTupler(tupler);
+  const monthUpdates=[];
+  Object.keys(checks).forEach(m=>{if(checks[m]&&checks[m][seciliNo]){delete checks[m][seciliNo];monthUpdates.push(fbSaveMonth(m,checks[m]||{}));}});
+  await Promise.all(monthUpdates);
+  showToast('✓ Tüp silindi');
+  closeDetail(); renderAll();
 }
 
 function closeDetail() {
@@ -847,12 +855,14 @@ function openNewSheet() {
   setTimeout(()=>document.getElementById('nYer')?.focus(),100);
 }
 
-function saveNew() {
+async function saveNew() {
   const yer=document.getElementById('nYer').value.trim();
   if(!yer){alert('Konum zorunludur.');return;}
   const maxNo=tupler.reduce((m,t)=>Math.max(m,t.no),0);
   tupler.push({no:maxNo+1,yer,cins:document.getElementById('nCins').value.trim()||null,dolum:document.getElementById('nDolum').value.trim()||null,skt:document.getElementById('nSkt').value.trim()||null});
-  await fbSaveTupler(tupler); closeNew(); renderAll();
+  await fbSaveTupler(tupler);
+  showToast('✓ Tüp eklendi');
+  closeNew(); renderAll();
 }
 
 function closeNew() { document.getElementById('newOverlay').classList.remove('show'); document.body.style.overflow=''; }
