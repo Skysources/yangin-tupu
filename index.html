@@ -548,7 +548,7 @@ async function fbLoadTupler() {
   } catch(e) { console.warn('Tüpler yüklenemedi:',e); }
   return VARSAYILAN;
 }
-async function await fbSaveTupler(l) {
+async function fbSaveTupler(l) {
   try { await setDoc(doc(db,'config','tupler'),{liste:l}); }
   catch(e) { console.error('Tüpler kaydedilemedi:',e); showToast('Kayıt hatası!','err'); }
 }
@@ -560,7 +560,7 @@ async function fbLoadChecks() {
     return result;
   } catch(e) { console.warn('Kontroller yüklenemedi:',e); return {}; }
 }
-async function await fbSaveMonth(monthKey, monthData) {
+async function fbSaveMonth(monthKey, monthData) {
   try { await setDoc(doc(db,'kontroller',monthKey),{kayitlar:monthData}); }
   catch(e) { console.error('Ay kaydedilemedi:',e); showToast('Kayıt hatası!','err'); }
 }
