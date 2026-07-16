@@ -146,7 +146,7 @@ body {
 }
 .badge.ok { background: var(--green); color: #fff; box-shadow: 0 3px 10px rgba(52,199,89,.35); }
 .badge.sorun { background: var(--red); color: #fff; box-shadow: 0 3px 10px rgba(255,59,48,.35); }
-.badge.big { min-width: 54px; height: 54px; font-size: 22px; border-radius: 15px; }
+.badge.big { min-width: 44px; height: 44px; font-size: 18px; border-radius: 12px; }
 .badge-num { font-size: 11px; font-weight: 700; letter-spacing: -.2px; line-height: 1; }
 .badge svg { display: block; }
 
@@ -173,134 +173,132 @@ body {
 
 /* SHEET */
 .sheet {
-  width: 100%; max-width: 540px; max-height: 88vh; overflow-y: auto;
+  width: 100%; max-width: 480px; max-height: 85vh; overflow-y: auto;
   background: var(--glass-strong);
   -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
   border: 0.5px solid rgba(255,255,255,.8);
-  border-radius: 24px; padding: 20px 20px 24px;
-  box-shadow: 0 30px 80px rgba(10,15,30,.35);
-  animation: popIn .22s cubic-bezier(.32,1.25,.5,1);
+  border-radius: 20px; padding: 14px 16px 20px;
+  box-shadow: 0 24px 60px rgba(10,15,30,.3);
+  animation: popIn .2s cubic-bezier(.32,1.25,.5,1);
 }
-@keyframes popIn { from { opacity: 0; transform: scale(.94); } }
+@keyframes popIn { from { opacity: 0; transform: scale(.95); } }
 .grabber { display: none; }
 
-.sheetHead { display: flex; align-items: center; gap: 12px; }
-.sheetLoc { font-weight: 700; font-size: 17px; letter-spacing: -.2px; line-height: 1.22; }
-.sheetType { font-size: 12.5px; color: var(--gray); font-weight: 500; margin-top: 2px; }
+.sheetHead { display: flex; align-items: center; gap: 10px; }
+.sheetLoc { font-weight: 700; font-size: 14px; letter-spacing: -.1px; line-height: 1.25; }
+.sheetType { font-size: 11px; color: var(--gray); font-weight: 500; margin-top: 1px; }
 .closeBtn, .iconBtn {
-  width: 32px; height: 32px; border: none; border-radius: 50%; cursor: pointer; flex-shrink: 0;
-  background: rgba(120,120,128,.16); color: var(--gray); font-size: 13px; font-weight: 700;
+  width: 26px; height: 26px; border: none; border-radius: 50%; cursor: pointer; flex-shrink: 0;
+  background: rgba(120,120,128,.14); color: var(--gray); font-size: 11px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
 }
-.iconBtn { font-size: 15px; color: var(--blue); background: rgba(0,113,227,.12); }
-.closeBtn:hover { background: rgba(120,120,128,.24); color: var(--ink); }
-.iconBtn:hover { background: rgba(0,113,227,.2); }
+.iconBtn { font-size: 13px; color: var(--blue); background: rgba(0,113,227,.1); }
+.closeBtn:hover { background: rgba(120,120,128,.22); color: var(--ink); }
+.iconBtn:hover { background: rgba(0,113,227,.18); }
 
-.infoRow { display: flex; gap: 10px; margin-top: 16px; }
+.infoRow { display: flex; gap: 7px; margin-top: 10px; }
 .infoBox {
-  flex: 1; display: flex; flex-direction: column; gap: 2px;
-  background: rgba(255,255,255,.55); border: 0.5px solid rgba(255,255,255,.7);
-  border-radius: var(--r-sm); padding: 9px 13px;
+  flex: 1; display: flex; flex-direction: column; gap: 1px;
+  background: rgba(255,255,255,.5); border: 0.5px solid rgba(255,255,255,.7);
+  border-radius: 9px; padding: 6px 10px;
 }
-.infoLbl { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; color: var(--gray); }
-.infoVal { font-weight: 700; font-size: 14px; }
+.infoLbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--gray); }
+.infoVal { font-weight: 700; font-size: 12px; }
 
 .warnBand {
-  margin-top: 10px; padding: 9px 13px; border-radius: var(--r-sm);
-  background: rgba(255,59,48,.12); color: var(--red-deep);
-  font-size: 13px; font-weight: 600; border: 0.5px solid rgba(255,59,48,.2);
+  margin-top: 7px; padding: 6px 10px; border-radius: 8px;
+  background: rgba(255,59,48,.10); color: var(--red-deep);
+  font-size: 11.5px; font-weight: 600; border: 0.5px solid rgba(255,59,48,.18);
 }
 
-.secTitle { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gray); margin: 22px 0 9px; }
+.secTitle { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--gray); margin: 14px 0 6px; }
 
-.checkGroup { display: flex; flex-direction: column; gap: 8px; }
+.checkGroup { display: flex; flex-direction: column; gap: 5px; }
 .checkRow {
-  display: flex; align-items: center; gap: 12px; padding: 13px 15px;
-  font-size: 14px; background: rgba(255,255,255,.6);
-  border: 0.5px solid rgba(255,255,255,.8);
-  border-radius: var(--r-sm);
-  box-shadow: 0 1px 3px rgba(30,35,50,.05);
-  transition: box-shadow .15s, background .15s;
+  display: flex; align-items: center; gap: 10px; padding: 8px 11px;
+  font-size: 12.5px; background: rgba(255,255,255,.55);
+  border: 0.5px solid rgba(255,255,255,.75);
+  border-radius: 9px;
+  transition: background .12s;
 }
-.checkRow:hover { background: rgba(255,255,255,.75); box-shadow: 0 3px 10px rgba(30,35,50,.08); }
-.checkLbl { flex: 1; font-weight: 600; letter-spacing: -.1px; font-size: 14px; }
+.checkRow:hover { background: rgba(255,255,255,.72); }
+.checkLbl { flex: 1; font-weight: 500; font-size: 12.5px; }
 
-.miniSeg { display: flex; background: rgba(120,120,128,.14); border-radius: 10px; padding: 3px; gap: 3px; flex-shrink: 0; }
+.miniSeg { display: flex; background: rgba(120,120,128,.12); border-radius: 8px; padding: 2px; gap: 2px; flex-shrink: 0; }
 .ms {
   border: none; background: transparent; cursor: pointer; font-family: inherit;
-  font-size: 12.5px; font-weight: 700; color: var(--gray);
-  padding: 6px 13px; border-radius: 8px; transition: all .15s;
+  font-size: 11px; font-weight: 700; color: var(--gray);
+  padding: 4px 10px; border-radius: 6px; transition: all .12s;
 }
 .ms:hover { color: var(--ink); }
-.msOk { background: var(--green); color: #fff; box-shadow: 0 2px 6px rgba(52,199,89,.45); }
+.msOk { background: var(--green); color: #fff; box-shadow: 0 1px 4px rgba(52,199,89,.4); }
 .msOk:hover { color: #fff; }
-.msBad { background: var(--red); color: #fff; box-shadow: 0 2px 6px rgba(255,59,48,.45); }
+.msBad { background: var(--red); color: #fff; box-shadow: 0 1px 4px rgba(255,59,48,.4); }
 .msBad:hover { color: #fff; }
 
 .note {
-  width: 100%; margin-top: 12px; padding: 11px 14px; font-family: inherit; font-size: 14px;
-  border: 0.5px solid rgba(255,255,255,.7); border-radius: var(--r-sm);
-  background: rgba(255,255,255,.55); color: var(--ink); resize: vertical; outline: none;
-  min-height: 72px;
+  width: 100%; margin-top: 8px; padding: 8px 10px; font-family: inherit; font-size: 12.5px;
+  border: 0.5px solid rgba(255,255,255,.65); border-radius: 9px;
+  background: rgba(255,255,255,.5); color: var(--ink); resize: vertical; outline: none;
+  min-height: 54px;
 }
 .note::placeholder { color: var(--gray); }
-.note:focus { background: rgba(255,255,255,.85); box-shadow: 0 0 0 3px rgba(0,113,227,.22); }
+.note:focus { background: rgba(255,255,255,.82); box-shadow: 0 0 0 2.5px rgba(0,113,227,.2); }
 
-.btnRow { display: flex; gap: 9px; margin-top: 14px; flex-wrap: wrap; }
+.btnRow { display: flex; gap: 7px; margin-top: 10px; flex-wrap: wrap; }
 .saveBtn {
-  flex: 1; min-width: 190px; padding: 13px 18px; border: none; border-radius: 14px; cursor: pointer;
-  font-family: inherit; font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.1px;
+  flex: 1; min-width: 140px; padding: 10px 14px; border: none; border-radius: 11px; cursor: pointer;
+  font-family: inherit; font-size: 13px; font-weight: 700; color: #fff;
   transition: transform .12s, filter .12s;
 }
 .saveBtn:active { transform: scale(.98); }
-.saveOk { background: var(--green); box-shadow: 0 6px 18px rgba(52,199,89,.35); }
+.saveOk { background: var(--green); box-shadow: 0 4px 12px rgba(52,199,89,.3); }
 .saveOk:hover { filter: brightness(.95); }
-.saveBad { background: var(--red); box-shadow: 0 6px 18px rgba(255,59,48,.35); }
+.saveBad { background: var(--red); box-shadow: 0 4px 12px rgba(255,59,48,.3); }
 .saveBad:hover { filter: brightness(.95); }
 .delBtn {
-  padding: 13px 16px; border-radius: 14px; cursor: pointer; font-family: inherit;
-  font-size: 13.5px; font-weight: 600; color: var(--red-deep);
-  background: rgba(255,59,48,.1); border: none;
+  padding: 10px 13px; border-radius: 11px; cursor: pointer; font-family: inherit;
+  font-size: 12px; font-weight: 600; color: var(--red-deep);
+  background: rgba(255,59,48,.09); border: none;
 }
-.delBtn:hover { background: rgba(255,59,48,.16); }
+.delBtn:hover { background: rgba(255,59,48,.15); }
 
-.histEmpty { font-size: 13.5px; color: var(--gray); }
-.histList { display: flex; flex-direction: column; gap: 4px; }
+.histEmpty { font-size: 12px; color: var(--gray); }
+.histList { display: flex; flex-direction: column; gap: 3px; }
 .histRow {
-  display: flex; gap: 11px; align-items: flex-start; padding: 10px 13px;
-  background: rgba(255,255,255,.5); border: 0.5px solid rgba(255,255,255,.65);
-  border-radius: var(--r-sm);
+  display: flex; gap: 8px; align-items: flex-start; padding: 7px 10px;
+  background: rgba(255,255,255,.48); border: 0.5px solid rgba(255,255,255,.62);
+  border-radius: 8px;
 }
-.histMonth { font-weight: 600; font-size: 14px; }
-.histOk { color: var(--green-deep); font-weight: 700; margin-left: 8px; font-size: 13px; }
-.histBad { color: var(--red-deep); font-weight: 700; margin-left: 8px; font-size: 13px; }
-.histIssues { font-size: 12.5px; color: var(--red-deep); margin-top: 2px; font-weight: 500; }
-.histNote { font-size: 13px; color: var(--gray); margin-top: 2px; font-style: italic; }
-.histDate { font-size: 11.5px; color: var(--gray); white-space: nowrap; padding-top: 3px; }
+.histMonth { font-weight: 600; font-size: 12.5px; }
+.histOk { color: var(--green-deep); font-weight: 700; margin-left: 6px; font-size: 11.5px; }
+.histBad { color: var(--red-deep); font-weight: 700; margin-left: 6px; font-size: 11.5px; }
+.histIssues { font-size: 11px; color: var(--red-deep); margin-top: 1px; font-weight: 500; }
+.histNote { font-size: 11.5px; color: var(--gray); margin-top: 1px; font-style: italic; }
+.histDate { font-size: 10.5px; color: var(--gray); white-space: nowrap; padding-top: 2px; }
 
-.formGroup { display: flex; flex-direction: column; margin-top: 16px; }
+.formGroup { display: flex; flex-direction: column; margin-top: 10px; }
 .formLbl {
-  display: block; font-size: 12px; font-weight: 700; color: var(--gray);
-  text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 6px;
+  display: block; font-size: 10px; font-weight: 700; color: var(--gray);
+  text-transform: uppercase; letter-spacing: .5px; margin: 10px 0 4px;
 }
 .formGroup .formLbl:first-child { margin-top: 0; }
 .formInput {
-  display: block; width: 100%; padding: 12px 14px;
-  font-family: inherit; font-size: 15px; font-weight: 500;
-  border: 0.5px solid rgba(255,255,255,.8); border-radius: var(--r-sm);
+  display: block; width: 100%; padding: 8px 10px;
+  font-family: inherit; font-size: 13px; font-weight: 500;
+  border: 0.5px solid rgba(255,255,255,.8); border-radius: 9px;
   background: rgba(255,255,255,.65); color: var(--ink); outline: none;
-  box-shadow: 0 1px 3px rgba(30,35,50,.05);
   transition: background .15s, box-shadow .15s;
 }
-.formInput::placeholder { color: rgba(110,110,115,.65); font-weight: 400; }
-.formInput:focus { background: rgba(255,255,255,.95); box-shadow: 0 0 0 3px rgba(0,113,227,.22); }
-.formRow2 { display: flex; gap: 10px; }
+.formInput::placeholder { color: rgba(110,110,115,.6); font-weight: 400; }
+.formInput:focus { background: rgba(255,255,255,.95); box-shadow: 0 0 0 2.5px rgba(0,113,227,.2); }
+.formRow2 { display: flex; gap: 8px; }
 .formRow2 > div { flex: 1; min-width: 0; }
 
-.dangerZone { margin-top: 22px; padding-top: 14px; border-top: 0.5px solid var(--hairline); }
+.dangerZone { margin-top: 14px; padding-top: 10px; border-top: 0.5px solid var(--hairline); }
 .ghostDanger {
   background: none; border: none; cursor: pointer; font-family: inherit;
-  font-size: 13px; font-weight: 600; color: var(--red-deep); opacity: .75; padding: 4px 0;
+  font-size: 11.5px; font-weight: 600; color: var(--red-deep); opacity: .7; padding: 3px 0;
 }
 .ghostDanger:hover { opacity: 1; text-decoration: underline; }
 .confirmRow { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
@@ -384,9 +382,14 @@ body {
           <span class="dot bekliyor"></span><span id="statBekl">90</span> bekliyor
         </div>
       </div>
-      <button class="addBtn" onclick="openNewSheet()">
-        <span class="addPlus">+</span><span class="addTxt">Yeni tüp</span>
-      </button>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="addBtn" style="background:rgba(255,255,255,.18);box-shadow:none;color:#fff" onclick="indir()" title="Raporu indir">
+          <span style="font-size:15px">⬇</span><span class="addTxt">İndir</span>
+        </button>
+        <button class="addBtn" onclick="openNewSheet()">
+          <span class="addPlus">+</span><span class="addTxt">Yeni tüp</span>
+        </button>
+      </div>
     </div>
 
     <div class="controls">
@@ -798,18 +801,18 @@ function renderDetailSheet() {
       <div class="formRow2">
         <div>
           <label class="formLbl">Dolum tarihi</label>
-          <input class="formInput" value="${taslak.dolum}" oninput="taslak.dolum=this.value" placeholder="Örn. OCAK 2025">
+          ${ayYilSecici('dolum', taslak.dolum)}
         </div>
         <div>
-          <label class="formLbl">Son kullanma</label>
-          <input class="formInput" value="${taslak.skt}" oninput="taslak.skt=this.value" placeholder="Örn. OCAK 2029">
+          <label class="formLbl">Son kullanma tarihi</label>
+          ${ayYilSecici('skt', taslak.skt)}
         </div>
       </div>
     </div>
     <div class="btnRow">
       <button class="saveBtn saveOk" onclick="saveEdit()">Değişiklikleri kaydet</button>
       <button class="delBtn" onclick="cancelEdit()">Vazgeç</button>
-    </div>`;
+    </div>\`;
   }
 
   document.getElementById('sheetContent').innerHTML=html;
@@ -874,8 +877,26 @@ function openNewSheet() {
       <label class="formLbl">Cinsi / kapasitesi</label>
       <input class="formInput" id="nCins" placeholder="Örn. 6 KG KURU TOZ">
       <div class="formRow2">
-        <div><label class="formLbl">Dolum tarihi</label><input class="formInput" id="nDolum" placeholder="Örn. TEMMUZ 2026"></div>
-        <div><label class="formLbl">Son kullanma</label><input class="formInput" id="nSkt" placeholder="Örn. TEMMUZ 2030"></div>
+        <div>
+          <label class="formLbl">Dolum tarihi</label>
+          <div style="display:flex;gap:5px">
+            <select class="formInput" id="nDolumAy" style="flex:1.4">
+              <option value="">Ay</option>
+              ${TR_AYLAR.map(a=>`<option value="${a}">${a}</option>`).join('')}
+            </select>
+            <input class="formInput" id="nDolumYil" type="number" min="2000" max="2099" placeholder="Yıl" style="flex:1;min-width:60px">
+          </div>
+        </div>
+        <div>
+          <label class="formLbl">Son kullanma</label>
+          <div style="display:flex;gap:5px">
+            <select class="formInput" id="nSktAy" style="flex:1.4">
+              <option value="">Ay</option>
+              ${TR_AYLAR.map(a=>`<option value="${a}">${a}</option>`).join('')}
+            </select>
+            <input class="formInput" id="nSktYil" type="number" min="2000" max="2099" placeholder="Yıl" style="flex:1;min-width:60px">
+          </div>
+        </div>
       </div>
     </div>
     <div class="btnRow">
@@ -890,7 +911,13 @@ async function saveNew() {
   const yer=document.getElementById('nYer').value.trim();
   if(!yer){alert('Konum zorunludur.');return;}
   const maxNo=tupler.reduce((m,t)=>Math.max(m,t.no),0);
-  tupler.push({no:maxNo+1,yer,cins:document.getElementById('nCins').value.trim()||null,dolum:document.getElementById('nDolum').value.trim()||null,skt:document.getElementById('nSkt').value.trim()||null,eklemeTarihi:aktifAy});
+  const nDolumAy=document.getElementById('nDolumAy').value;
+  const nDolumYil=document.getElementById('nDolumYil').value;
+  const nSktAy=document.getElementById('nSktAy').value;
+  const nSktYil=document.getElementById('nSktYil').value;
+  const nDolum = (nDolumAy&&nDolumYil)?`${nDolumAy} ${nDolumYil}`:null;
+  const nSkt   = (nSktAy&&nSktYil)?`${nSktAy} ${nSktYil}`:null;
+  tupler.push({no:maxNo+1,yer,cins:document.getElementById('nCins').value.trim()||null,dolum:nDolum,skt:nSkt,eklemeTarihi:aktifAy});
   await fbSaveTupler(tupler);
   showToast('✓ Tüp eklendi');
   closeNew(); renderAll();
@@ -914,6 +941,84 @@ window.openNewSheet=openNewSheet; window.closeNew=closeNew; window.saveNew=saveN
 window.setItem=setItem; window.setDiger=setDiger;
 window.startEdit=startEdit; window.cancelEdit=cancelEdit; window.saveEdit=saveEdit;
 window.saveDetail=saveDetail; window.silAyKaydi=silAyKaydi;
+// ── AY YIL SEÇİCİ ──
+const TR_AYLAR = ['OCAK','ŞUBAT','MART','NİSAN','MAYIS','HAZİRAN','TEMMUZ','AĞUSTOS','EYLÜL','EKİM','KASIM','ARALIK'];
+
+function ayYilSecici(field, mevcut) {
+  // "OCAK 2025" → {ay:'OCAK', yil:'2025'}
+  const parts = (mevcut||'').trim().split(/\s+/);
+  const secAy  = TR_AYLAR.includes(parts[0]) ? parts[0] : '';
+  const secYil = parts[1] || '';
+  const ayOpts = TR_AYLAR.map(a=>`<option value="${a}" ${a===secAy?'selected':''}>${a}</option>`).join('');
+  return `<div style="display:flex;gap:5px">
+    <select class="formInput" style="flex:1.4" onchange="updateTaslakTarih('${field}','ay',this.value)">
+      <option value="">Ay seç</option>${ayOpts}
+    </select>
+    <input class="formInput" style="flex:1;min-width:60px" type="number" min="2000" max="2099"
+      value="${secYil}" placeholder="Yıl"
+      oninput="updateTaslakTarih('${field}','yil',this.value)">
+  </div>`;
+}
+
+function updateTaslakTarih(field, part, val) {
+  // taslak.dolum veya taslak.skt güncelle
+  const cur = (taslak[field]||'').trim().split(/\s+/);
+  let ay   = TR_AYLAR.includes(cur[0]) ? cur[0] : '';
+  let yil  = cur[1] || '';
+  if(part === 'ay')  ay  = val;
+  if(part === 'yil') yil = val;
+  taslak[field] = (ay && yil) ? `${ay} ${yil}` : (ay || yil || '');
+}
+
+window.updateTaslakTarih = updateTaslakTarih;
+
+// ── İNDİR (Excel/CSV) ──
+function indir() {
+  const ay = monthLabel(aktifAy);
+  const av = checks[aktifAy] || {};
+  const aktifTupler = tupler.filter(tupAktifMi);
+
+  // BOM + CSV
+  let csv = '\uFEFF'; // UTF-8 BOM for Excel
+  csv += `NNG ENERGY - Yangın Tüpü Aylık Kontrol Formu\n`;
+  csv += `Kontrol Ayı: ${ay}\n`;
+  csv += `Oluşturulma: ${new Date().toLocaleDateString('tr-TR')}\n\n`;
+  csv += 'No;Bulunduğu Yer;Cins/Kapasite;Dolum Tarihi;Son Kullanma;Durum;Basınç;Pim;Manometre;Hortum;Diğer Sorun;Not\n';
+
+  aktifTupler.forEach(t => {
+    const k = av[String(t.no)] || {};
+    const durum = k.durum === 'ok' ? 'Uygun' : k.durum === 'sorun' ? 'Sorunlu' : 'Kontrol edilmedi';
+    const items = k.items || {};
+    const b  = k.durum ? (items.basinc    === false ? 'Sorunlu' : 'Uygun') : '-';
+    const p  = k.durum ? (items.pim       === false ? 'Sorunlu' : 'Uygun') : '-';
+    const m  = k.durum ? (items.manometre === false ? 'Sorunlu' : 'Uygun') : '-';
+    const h  = k.durum ? (items.hortum    === false ? 'Sorunlu' : 'Uygun') : '-';
+    const dg = k.digerSorun ? 'Var' : (k.durum ? 'Yok' : '-');
+    const not = (k.not || '').replace(/;/g, ',');
+    csv += `${t.no};"${t.yer||''}";"${t.cins||''}";"${t.dolum||''}";"${t.skt||''}";${durum};${b};${p};${m};${h};${dg};"${not}"\n`;
+  });
+
+  // Özet
+  const okC    = aktifTupler.filter(t=>(av[String(t.no)]||{}).durum==='ok').length;
+  const sorunC = aktifTupler.filter(t=>(av[String(t.no)]||{}).durum==='sorun').length;
+  const beklC  = aktifTupler.length - okC - sorunC;
+  csv += `\nÖZET\n`;
+  csv += `Toplam;${aktifTupler.length}\n`;
+  csv += `Uygun;${okC}\n`;
+  csv += `Sorunlu;${sorunC}\n`;
+  csv += `Kontrol Edilmedi;${beklC}\n`;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `Yangin_Tupu_Kontrol_${aktifAy}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ Rapor indirildi');
+}
+window.indir = indir;
+
 window.askSil=askSil; window.cancelSil=cancelSil; window.doSil=doSil;
 
 // ── TOAST ──
