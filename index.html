@@ -418,7 +418,7 @@ body {
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <button class="addBtn" style="background:rgba(255,255,255,.18);box-shadow:none;color:#fff" onclick="indir()" title="Raporu indir">
+        <button class="addBtn" style="background:rgba(120,120,128,.14);box-shadow:none;color:#0071E3" onclick="indir()" title="Raporu indir">
           <span style="font-size:15px">⬇</span><span class="addTxt">İndir</span>
         </button>
         <button class="addBtn" onclick="openNewSheet()">
@@ -1083,52 +1083,127 @@ function updateTaslakTarih(field, part, val) {
 
 window.updateTaslakTarih = updateTaslakTarih;
 
-// ── İNDİR (Excel/CSV) ──
+// ── İNDİR (PDF raporu) ──
 function indir() {
   const ay = monthLabel(aktifAy);
   const av = checks[aktifAy] || {};
   const aktifTupler = tupler.filter(tupAktifMi);
-
-  // BOM + CSV
-  let csv = '\uFEFF'; // UTF-8 BOM for Excel
-  csv += `NNG ENERGY - Yangın Tüpü Aylık Kontrol Formu\n`;
-  csv += `Kontrol Ayı: ${ay}\n`;
-  csv += `Oluşturulma: ${new Date().toLocaleDateString('tr-TR')}\n\n`;
   const aktifYil = aktifAy.split('-')[0];
-  const yillikAy = yillikChecks[aktifYil]||{};
-  csv += 'No;Bulunduğu Yer;Cins/Kapasite;Dolum Tarihi;Son Kullanma;Durum;Basınç;Pim;Manometre;Hortum;Diğer Sorun;Not;Yıllık Periyodik Kontrol\n';
+  const yillikAy = yillikChecks[aktifYil] || {};
 
-  aktifTupler.forEach(t => {
-    const k = av[String(t.no)] || {};
-    const durum = k.durum === 'ok' ? 'Uygun' : k.durum === 'sorun' ? 'Sorunlu' : 'Kontrol edilmedi';
-    const items = k.items || {};
-    const b  = k.durum ? (items.basinc    === false ? 'Sorunlu' : 'Uygun') : '-';
-    const p  = k.durum ? (items.pim       === false ? 'Sorunlu' : 'Uygun') : '-';
-    const m  = k.durum ? (items.manometre === false ? 'Sorunlu' : 'Uygun') : '-';
-    const h  = k.durum ? (items.hortum    === false ? 'Sorunlu' : 'Uygun') : '-';
-    const dg = k.digerSorun ? 'Var' : (k.durum ? 'Yok' : '-');
-    const not = (k.not || '').replace(/;/g, ',');
-    csv += `${t.no};"${t.yer||''}";"${t.cins||''}";"${t.dolum||''}";"${t.skt||''}";${durum};${b};${p};${m};${h};${dg};"${not}";"${yillikStr}"\n`;
+  const rows = aktifTupler.map(t => {
+    const k = av[String(t.no)] || null;
+    const durum = k ? k.durum : 'bekliyor';
+    const durumLabel = durum === 'ok' ? 'Uygun' : durum === 'sorun' ? 'Sorunlu' : 'Bekliyor';
+    const durumColor = durum === 'ok' ? '#248A3D' : durum === 'sorun' ? '#D70015' : '#6E6E73';
+    const rowBg = durum === 'sorun' ? 'rgba(255,59,48,.06)' : 'transparent';
+    const sktCls = sktDurum(t.skt);
+    const sktColor = sktCls === 'gecmis' ? '#D70015' : sktCls === 'yaklasiyor' ? '#B25000' : '#1D1D1F';
+    let sorunDetay = '—';
+    if (k && durum === 'sorun') {
+      const bozuk = KALEMLER.filter(kk => k.items?.[kk.key] === false).map(kk => kk.label);
+      if (k.digerSorun) bozuk.push('Diğer sorun');
+      sorunDetay = (bozuk.join(' · ') || 'Belirtilmemiş') + (k.not ? ` — "${k.not}"` : '');
+    }
+    const yk = yillikAy[String(t.no)];
+    const yillikLabel = yk ? (yk.durum === 'uygun' ? 'Uygun' : 'Uygun Değil') : '—';
+    const yillikColor = yk ? (yk.durum === 'uygun' ? '#248A3D' : '#D70015') : '#6E6E73';
+    return { no: t.no, yer: t.yer || '—', cins: t.cins || 'Belirtilmemiş', dolum: t.dolum || '—',
+      sktDisplay: t.skt || '—', sktColor, durumLabel, durumColor, rowBg, sorunDetay, yillikLabel, yillikColor };
   });
 
-  // Özet
-  const okC    = aktifTupler.filter(t=>(av[String(t.no)]||{}).durum==='ok').length;
-  const sorunC = aktifTupler.filter(t=>(av[String(t.no)]||{}).durum==='sorun').length;
-  const beklC  = aktifTupler.length - okC - sorunC;
-  csv += `\nÖZET\n`;
-  csv += `Toplam;${aktifTupler.length}\n`;
-  csv += `Uygun;${okC}\n`;
-  csv += `Sorunlu;${sorunC}\n`;
-  csv += `Kontrol Edilmedi;${beklC}\n`;
+  const ok = rows.filter(r => r.durumLabel === 'Uygun').length;
+  const sorun = rows.filter(r => r.durumLabel === 'Sorunlu').length;
+  const bekliyor = rows.length - ok - sorun;
+  const pct = rows.length ? Math.round((ok + sorun) / rows.length * 100) : 0;
+  const sorunlular = rows.filter(r => r.durumLabel === 'Sorunlu');
+  const tarihStr = new Date().toLocaleDateString('tr-TR');
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `Yangin_Tupu_Kontrol_${aktifAy}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('✓ Rapor indirildi');
+  const rowsHtml = rows.map(r => `
+    <tr style="border-bottom:0.5px solid rgba(0,0,0,.08);background:${r.rowBg}">
+      <td style="padding:5px 4px;font-weight:700;color:#6E6E73">${r.no}</td>
+      <td style="padding:5px 4px;font-weight:600">${r.yer}</td>
+      <td style="padding:5px 4px;color:#6E6E73">${r.cins}</td>
+      <td style="padding:5px 4px;color:#6E6E73">${r.dolum}</td>
+      <td style="padding:5px 4px;font-weight:600;color:${r.sktColor}">${r.sktDisplay}</td>
+      <td style="padding:5px 4px;font-weight:700;color:${r.durumColor}">${r.durumLabel}</td>
+      <td style="padding:5px 4px;color:#D70015">${r.sorunDetay}</td>
+      <td style="padding:5px 4px;font-weight:600;color:${r.yillikColor}">${r.yillikLabel}</td>
+    </tr>`).join('');
+
+  const sorunHtml = sorunlular.length ? `
+    <div style="margin-top:14px;padding:10px 12px;border:1px solid rgba(255,59,48,.3);border-radius:8px;background:rgba(255,59,48,.05)">
+      <div style="font-size:11px;font-weight:700;color:#D70015;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Sorunlu Tüpler — Aksiyon Gerekli</div>
+      ${sorunlular.map(s => `<div style="display:flex;gap:8px;font-size:11.5px;padding:4px 0;border-bottom:0.5px solid rgba(255,59,48,.15)">
+        <span style="font-weight:700;width:26px;flex-shrink:0">#${s.no}</span>
+        <span style="flex:1;min-width:0"><strong>${s.yer}</strong> — ${s.sorunDetay}</span>
+      </div>`).join('')}
+    </div>` : '';
+
+  const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
+  <title>Yangın Tüpü Kontrol Raporu — ${ay}</title>
+  <style>
+    @page { size: A4; margin: 14mm; }
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;color:#1D1D1F;margin:0}
+    table{border-collapse:collapse;width:100%}
+    thead{display:table-header-group}
+    tr{break-inside:avoid}
+    .head{display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:10px;border-bottom:1.5px solid #1D1D1F;margin-bottom:14px}
+  </style></head><body>
+  <div class="head">
+    <div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#6E6E73">FR.43.17 · Aylık Kontrol Formu</div>
+      <div style="font-size:20px;font-weight:700;letter-spacing:-.3px">Yangın Tüpü Kontrol Raporu</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:15px;font-weight:700;color:#0071E3">${ay}</div>
+      <div style="font-size:10px;color:#6E6E73;margin-top:2px">Oluşturulma: ${tarihStr}</div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+    <div style="border:1px solid rgba(0,0,0,.12);border-radius:8px;padding:10px 12px">
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6E6E73">Toplam Tüp</div>
+      <div style="font-size:24px;font-weight:700;margin-top:3px">${rows.length}</div>
+    </div>
+    <div style="border:1px solid rgba(52,199,89,.35);border-radius:8px;padding:10px 12px;background:rgba(52,199,89,.06)">
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#248A3D">Uygun</div>
+      <div style="font-size:24px;font-weight:700;margin-top:3px;color:#248A3D">${ok}</div>
+    </div>
+    <div style="border:1px solid rgba(255,59,48,.35);border-radius:8px;padding:10px 12px;background:rgba(255,59,48,.06)">
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#D70015">Sorunlu</div>
+      <div style="font-size:24px;font-weight:700;margin-top:3px;color:#D70015">${sorun}</div>
+    </div>
+    <div style="border:1px solid rgba(0,0,0,.12);border-radius:8px;padding:10px 12px">
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6E6E73">Bekliyor</div>
+      <div style="font-size:24px;font-weight:700;margin-top:3px;color:#6E6E73">${bekliyor}</div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding:8px 12px;border:1px solid rgba(0,0,0,.1);border-radius:8px;font-size:11px">
+    <span style="color:#6E6E73">Kontrol tamamlanma oranı</span>
+    <span style="font-weight:700;color:#0071E3">%${pct}</span>
+  </div>
+  ${sorunHtml}
+  <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6E6E73;margin:16px 0 6px">Tüp Bazında Kontrol Listesi</div>
+  <table style="font-size:9.5px">
+    <thead><tr style="border-bottom:1.5px solid #1D1D1F">
+      <th style="padding:5px 4px;width:22px;text-align:left">No</th>
+      <th style="padding:5px 4px;text-align:left">Bulunduğu Yer</th>
+      <th style="padding:5px 4px;text-align:left">Cins / Kapasite</th>
+      <th style="padding:5px 4px;width:60px;text-align:left">Dolum</th>
+      <th style="padding:5px 4px;width:70px;text-align:left">SKT</th>
+      <th style="padding:5px 4px;width:56px;text-align:left">Durum</th>
+      <th style="padding:5px 4px;text-align:left">Sorun Detayı</th>
+      <th style="padding:5px 4px;width:64px;text-align:left">Yıllık Kontrol</th>
+    </tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  </body></html>`;
+
+  const w = window.open('', '_blank');
+  w.document.write(html);
+  w.document.close();
+  w.onload = () => { w.focus(); w.print(); };
+  showToast('✓ Rapor açıldı, PDF olarak kaydedebilirsiniz');
 }
 window.indir = indir;
 
