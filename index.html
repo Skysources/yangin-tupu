@@ -142,14 +142,14 @@ body {
   min-width: 52px; height: 52px; border-radius: 14px; flex-shrink: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 1px;
-  background: #E8302A; color: #fff;
+  background: #F2F2F5; color: #6E6E73; border: 0.5px solid rgba(0,0,0,.07);
   overflow: hidden;
 }
-.badge.ok    { background: var(--green); box-shadow: 0 3px 10px rgba(52,199,89,.35); }
-.badge.sorun { background: var(--red);   box-shadow: 0 3px 10px rgba(255,59,48,.35); }
-.badge.bekliyor { background: #E8302A; }
+.badge.ok    { background: var(--green); color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(52,199,89,.35); }
+.badge.sorun { background: var(--red);   color: #fff; border-color: transparent; box-shadow: 0 3px 10px rgba(255,59,48,.35); }
+.badge.bekliyor { background: #F2F2F5; color: #6E6E73; border-color: rgba(0,0,0,.07); }
 .badge.big { min-width: 44px; height: 44px; font-size: 18px; border-radius: 12px; }
-.badge-num { font-size: 8px; font-weight: 700; letter-spacing: 0; line-height: 1; color: #fff; opacity: .9; }
+.badge-num { font-size: 8px; font-weight: 700; letter-spacing: 0; line-height: 1; color: currentColor; opacity: .85; }
 .badge-img { width: 28px; height: 28px; object-fit: contain; object-position: center; display: block; margin: 0 auto; }
 .badge-img.ok-img { filter: brightness(0) invert(1) sepia(1) saturate(3) hue-rotate(90deg); }
 
@@ -315,11 +315,11 @@ body {
 .formGroup { display: flex; flex-direction: column; margin-top: 10px; }
 .formLbl {
   display: block; font-size: 10px; font-weight: 700; color: var(--gray);
-  text-transform: uppercase; letter-spacing: .5px; margin: 10px 0 4px;
+  text-transform: uppercase; letter-spacing: .5px; margin: 12px 0 6px;
 }
 .formGroup .formLbl:first-child { margin-top: 0; }
 .formInput {
-  display: block; width: 100%; padding: 8px 10px;
+  display: block; width: 100%; padding: 9px 12px; box-sizing: border-box;
   font-family: inherit; font-size: 13px; font-weight: 500;
   border: 0.5px solid rgba(255,255,255,.8); border-radius: 9px;
   background: rgba(255,255,255,.65); color: var(--ink); outline: none;
@@ -329,6 +329,7 @@ body {
 .formInput:focus { background: rgba(255,255,255,.95); box-shadow: 0 0 0 2.5px rgba(0,113,227,.2); }
 .formRow2 { display: flex; gap: 8px; }
 .formRow2 > div { flex: 1; min-width: 0; }
+.formRow2 .formLbl { white-space: nowrap; }
 
 .dangerZone { margin-top: 14px; padding-top: 10px; border-top: 0.5px solid var(--hairline); }
 .ghostDanger {
@@ -663,6 +664,8 @@ let yillikNot = '';
 let duzenleMode = false;
 let silOnay = false;
 let taslak = {};
+function setTaslakField(field, val) { taslak[field] = val; }
+window.setTaslakField = setTaslakField;
 
 function ayVerisi() { return checks[aktifAy]||{}; }
 
@@ -876,9 +879,9 @@ function renderDetailSheet() {
     </div>
     <div class="formGroup">
       <label class="formLbl">Bulunduğu yer</label>
-      <input class="formInput" value="${taslak.yer}" oninput="taslak.yer=this.value" placeholder="Örn. ÜST KAT ORTA KOLON">
+      <input class="formInput" value="${taslak.yer}" oninput="setTaslakField('yer',this.value)" placeholder="Örn. ÜST KAT ORTA KOLON">
       <label class="formLbl">Cinsi / kapasitesi</label>
-      <input class="formInput" value="${taslak.cins}" oninput="taslak.cins=this.value" placeholder="Örn. 6 KG KURU TOZ">
+      <input class="formInput" value="${taslak.cins}" oninput="setTaslakField('cins',this.value)" placeholder="Örn. 6 KG KURU TOZ">
       <div class="formRow2">
         <div>
           <label class="formLbl">Dolum tarihi</label>
@@ -978,7 +981,7 @@ function openNewSheet() {
   taslak={yer:'',cins:'',dolum:'',skt:''};
   document.getElementById('newContent').innerHTML=`
     <div class="sheetHead">
-      <div class="badge big bekliyor" style="font-size:20px;font-weight:700;color:#fff">+</div>
+      <div class="badge big" style="font-size:20px;font-weight:700;color:var(--blue);background:rgba(0,113,227,.1);border-color:transparent">+</div>
       <div style="flex:1;min-width:0"><div class="sheetLoc">Yeni tüp ekle</div><div class="sheetType">Listeye yeni bir yangın tüpü kaydet</div></div>
       <button class="closeBtn" onclick="closeNew()">✕</button>
     </div>
