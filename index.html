@@ -163,6 +163,20 @@ body {
 .mark.ok { color: var(--green-deep); }
 .mark.sorun { color: var(--red-deep); }
 
+.flame-mark {
+  transform-origin: 50% 90%;
+  animation: flameFlicker 1.6s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+}
+@keyframes flameFlicker {
+  0%   { transform: scale(1) rotate(0deg) translateY(0); opacity: 1; }
+  20%  { transform: scale(1.06, 0.96) rotate(-2deg) translateY(-0.5px); opacity: .92; }
+  40%  { transform: scale(0.96, 1.07) rotate(1.5deg) translateY(0.5px); opacity: 1; }
+  60%  { transform: scale(1.04, 0.95) rotate(-1deg) translateY(-0.5px); opacity: .95; }
+  80%  { transform: scale(0.98, 1.04) rotate(2deg) translateY(0); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg) translateY(0); opacity: 1; }
+}
+
 /* OVERLAY */
 .overlay {
   position: fixed; inset: 0; z-index: 50;
@@ -721,7 +735,7 @@ function renderGrid() {
   el.innerHTML=filtered.map(t=>{
     const d=durumOf(t.no);
     const skt=sktDurum(t.skt);
-    const mark=d==='ok'?'✓':d==='sorun'?`<img src="${FLAME_IMG}" alt="sorunlu" style="width:20px;height:20px;object-fit:contain;display:block">`:'›';
+    const mark=d==='ok'?'✓':d==='sorun'?`<img src="${FLAME_IMG}" alt="sorunlu" class="flame-mark" style="width:20px;height:20px;object-fit:contain;display:block">`:'›';
     const pills=(skt==='gecmis'?'<span class="pill pillRed">SKT geçmiş</span>':skt==='yaklasiyor'?'<span class="pill pillAmber">SKT yakın</span>':'');
     const imgSrc = TUP_IMG;
     return `<button class="card ${d}" onclick="openDetail(${t.no})">
